@@ -38,6 +38,8 @@ export type Product = {
   gradient: string;
   featured: boolean;
   bestSeller: boolean;
+  rating: number;
+  reviewCount: number;
 };
 
 export type BlogPost = {
@@ -55,12 +57,23 @@ export type BlogPost = {
 export type Testimonial = {
   id: string;
   name: string;
+  city: string;
+  rating: number;
   text: string;
 };
 
 export type Benefit = {
   title: string;
   description: string;
+};
+
+export type SkinNeed = {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  accent: string;
+  eyebrow: string;
 };
 
 export type DashboardMetric = {
@@ -86,4 +99,3 @@ export type AdminCustomer = {
   totalSpent: number;
   purchases: number;
 };
-

@@ -9,15 +9,24 @@ type AddToCartButtonProps = {
   slug: string;
   name: string;
   price: number;
+  className?: string;
+  label?: string;
 };
 
-export function AddToCartButton({ productId, slug, name, price }: AddToCartButtonProps) {
+export function AddToCartButton({
+  productId,
+  slug,
+  name,
+  price,
+  className,
+  label = "Agregar al carrito",
+}: AddToCartButtonProps) {
   const addItem = useCartStore((state) => state.addItem);
   const [added, setAdded] = useState(false);
 
   return (
     <button
-      className="rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
+      className={className ?? "rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"}
       onClick={() => {
         addItem({ productId, slug, name, price });
         setAdded(true);
@@ -25,8 +34,7 @@ export function AddToCartButton({ productId, slug, name, price }: AddToCartButto
       }}
       type="button"
     >
-      {added ? "Agregado" : "Agregar al carrito"}
+      {added ? "Agregado" : label}
     </button>
   );
 }
-

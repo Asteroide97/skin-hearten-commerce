@@ -7,6 +7,7 @@ import type {
   Category,
   DashboardMetric,
   Product,
+  SkinNeed,
   Testimonial,
 } from "@/lib/types";
 
@@ -52,7 +53,7 @@ export const brands: Brand[] = [
   {
     id: "brand-natura",
     name: "Natura Ritual",
-    description: "Botanicos de alto desempeo y acabados limpios.",
+    description: "Botanicos de alto desempeno y acabados limpios.",
   },
   {
     id: "brand-atelier",
@@ -107,6 +108,8 @@ export const products: Product[] = [
     gradient: "from-rose-100 via-white to-stone-100",
     featured: true,
     bestSeller: true,
+    rating: 4.9,
+    reviewCount: 218,
   },
   {
     id: "prod-002",
@@ -137,12 +140,14 @@ export const products: Product[] = [
       },
     ],
     skinTypes: ["Seca", "Sensible", "Normal"],
-    concerns: ["Sensibilidad", "Deshidratacion"],
+    concerns: ["Sensibilidad", "Acne", "Deshidratacion"],
     images: ["sand", "cream", "linen"],
     highlight: "Limpieza suave, cero sensacion tirante.",
     gradient: "from-stone-100 via-white to-amber-50",
     featured: true,
     bestSeller: false,
+    rating: 4.8,
+    reviewCount: 143,
   },
   {
     id: "prod-003",
@@ -180,6 +185,8 @@ export const products: Product[] = [
     gradient: "from-orange-50 via-rose-50 to-white",
     featured: true,
     bestSeller: true,
+    rating: 4.9,
+    reviewCount: 176,
   },
   {
     id: "prod-004",
@@ -216,6 +223,8 @@ export const products: Product[] = [
     gradient: "from-yellow-50 via-white to-rose-50",
     featured: false,
     bestSeller: true,
+    rating: 4.8,
+    reviewCount: 264,
   },
   {
     id: "prod-005",
@@ -246,12 +255,14 @@ export const products: Product[] = [
       },
     ],
     skinTypes: ["Mixta", "Normal", "Madura"],
-    concerns: ["Manchas", "Textura"],
+    concerns: ["Manchas", "Textura", "Acne"],
     images: ["rose", "amber", "linen"],
     highlight: "Correccion gradual con sensorial premium.",
     gradient: "from-amber-100 via-rose-50 to-white",
     featured: false,
     bestSeller: false,
+    rating: 4.7,
+    reviewCount: 91,
   },
   {
     id: "prod-006",
@@ -288,43 +299,141 @@ export const products: Product[] = [
     gradient: "from-rose-50 via-white to-orange-50",
     featured: true,
     bestSeller: false,
+    rating: 4.8,
+    reviewCount: 132,
+  },
+  {
+    id: "prod-007",
+    slug: "serum-balance-bha-niacinamida",
+    name: "Serum Balance BHA + Niacinamida",
+    brand: "Atelier Derm",
+    category: "Tratamientos",
+    sku: "AD-TRT-021",
+    price: 890,
+    compareAtPrice: 1050,
+    stock: 16,
+    description:
+      "Serum de uso nocturno para poros visibles, brotes esporadicos y textura irregular.",
+    benefits: [
+      "Ayuda a desobstruir poros",
+      "Mejora textura sin sensacion pesada",
+      "Acompana rutinas para acne adulto",
+    ],
+    ingredients: ["BHA", "Niacinamida", "Zinc PCA"],
+    usage: [
+      "Aplicar 2 a 3 noches por semana",
+      "Extender sobre piel seca",
+      "Aumentar frecuencia segun tolerancia",
+    ],
+    faq: [
+      {
+        question: "Sirve para acne adulto?",
+        answer: "Si, fue curado para brotes esporadicos, poros y textura en piel adulta.",
+      },
+    ],
+    skinTypes: ["Mixta", "Grasa", "Normal"],
+    concerns: ["Acne", "Poros", "Textura"],
+    images: ["linen", "white", "sand"],
+    highlight: "Control elegante de brotes y textura.",
+    gradient: "from-stone-100 via-white to-rose-50",
+    featured: true,
+    bestSeller: false,
+    rating: 4.7,
+    reviewCount: 88,
   },
 ];
 
 export const benefits: Benefit[] = [
   {
-    title: "Envios a todo Mexico",
-    description: "Cobertura nacional con seguimiento y tiempos claros desde checkout.",
+    title: "Productos originales",
+    description: "Curaduria enfocada en marcas confiables, formulas serias y resultados visibles.",
   },
   {
-    title: "Productos originales",
-    description: "Curaduria enfocada en marcas confiables y formulas de alto desempeno.",
+    title: "Envios a todo Mexico",
+    description: "Cobertura nacional con seguimiento claro y umbral de envio gratis en compras elegibles.",
   },
   {
     title: "Pago seguro",
-    description: "Checkout preparado para Mercado Pago, PayPal y Stripe.",
+    description: "Checkout limpio para Stripe, PayPal y Mercado Pago, pensado para compra movil.",
   },
   {
-    title: "Soporte especializado",
-    description: "Atencion enfocada en rutina, uso correcto y confianza post compra.",
+    title: "Asesoria especializada",
+    description: "Acompanamiento por WhatsApp para resolver rutina, ingredientes y uso correcto.",
   },
 ];
 
 export const testimonials: Testimonial[] = [
   {
     id: "tm-1",
-    name: "Mariana G.",
-    text: "La experiencia se siente limpia, clara y premium. Encontre productos sin perder tiempo.",
+    name: "Mariana Gonzalez",
+    city: "Ciudad de Mexico",
+    rating: 5,
+    text: "Pude comprar por problema de piel, no por moda. Encontre manchas y protector solar en minutos y el checkout se sintio serio.",
   },
   {
     id: "tm-2",
-    name: "Lucia R.",
-    text: "El checkout se entiende rapido en movil y la seleccion de productos transmite confianza.",
+    name: "Lucia Herrera",
+    city: "Monterrey",
+    rating: 5,
+    text: "La navegacion en movil se siente muy clara. Los productos tienen suficiente informacion para comprar con confianza sin salir a buscar resenas.",
   },
   {
     id: "tm-3",
-    name: "Daniela H.",
-    text: "La curaduria se nota. Todo comunica una marca cuidada y profesional.",
+    name: "Daniela Huerta",
+    city: "Guadalajara",
+    rating: 4.8,
+    text: "La curaduria se ve premium y coherente. WhatsApp visible y beneficios claros me dieron seguridad antes de pagar.",
+  },
+];
+
+export const shopNeeds: SkinNeed[] = [
+  {
+    id: "need-acne",
+    title: "Acne",
+    description: "Texturas ligeras y tratamientos para brotes adultos, poros y marcas recientes.",
+    href: "/productos?problema=Acne",
+    accent: "from-stone-100 via-white to-rose-50",
+    eyebrow: "Brotes y textura",
+  },
+  {
+    id: "need-manchas",
+    title: "Manchas",
+    description: "Rutinas nocturnas y proteccion diaria para tono mas uniforme.",
+    href: "/productos?problema=Manchas",
+    accent: "from-amber-100 via-white to-orange-50",
+    eyebrow: "Tono desigual",
+  },
+  {
+    id: "need-antiedad",
+    title: "Antiedad",
+    description: "Peptidos, ceramidas y antioxidantes para firmeza, elasticidad y lineas finas.",
+    href: "/productos?problema=Firmeza",
+    accent: "from-rose-100 via-white to-stone-100",
+    eyebrow: "Firmeza",
+  },
+  {
+    id: "need-hidratacion",
+    title: "Hidratacion",
+    description: "Capas de confort para deshidratacion, tirantez y barrera debilitada.",
+    href: "/productos?problema=Deshidratacion",
+    accent: "from-white via-rose-50 to-orange-50",
+    eyebrow: "Confort diario",
+  },
+  {
+    id: "need-sensitive",
+    title: "Piel sensible",
+    description: "Limpieza suave y formulas nobles para enrojecimiento y reactividad.",
+    href: "/productos?problema=Sensibilidad",
+    accent: "from-stone-100 via-white to-amber-50",
+    eyebrow: "Calma visible",
+  },
+  {
+    id: "need-sunscreen",
+    title: "Protector solar",
+    description: "Acabados elegantes para reaplicar diario sin residuo blanco ni pesadez.",
+    href: "/productos?categoria=protector-solar",
+    accent: "from-yellow-50 via-white to-rose-50",
+    eyebrow: "Uso diario",
   },
 ];
 
@@ -454,4 +563,3 @@ export function getProductBySlug(slug: string) {
 export function getBlogPostBySlug(slug: string) {
   return blogPosts.find((post) => post.slug === slug);
 }
-

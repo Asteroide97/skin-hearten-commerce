@@ -17,9 +17,24 @@ const playfair = Playfair_Display({
   variable: "--font-playfair",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "Skin Hearten Commerce",
-  description: "Skincare premium con enfoque mobile first, confianza y conversion.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Skin Hearten | Skincare premium",
+    template: "%s | Skin Hearten",
+  },
+  description:
+    "Skincare premium con enfoque mobile first para manchas, antiedad, sensibilidad, hidratacion y proteccion solar.",
+  openGraph: {
+    type: "website",
+    siteName: "Skin Hearten",
+    locale: "es_MX",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({
@@ -41,4 +56,3 @@ export default function RootLayout({
     </html>
   );
 }
-

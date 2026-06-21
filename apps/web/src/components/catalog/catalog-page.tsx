@@ -9,6 +9,8 @@ import { categories, products } from "@/lib/site-data";
 
 type CatalogPageProps = {
   initialCategory?: string;
+  initialSearch?: string;
+  initialConcern?: string;
 };
 
 type SortOption =
@@ -18,18 +20,24 @@ type SortOption =
   | "price-desc"
   | "featured";
 
-export function CatalogPage({ initialCategory = "all" }: CatalogPageProps) {
+export function CatalogPage({
+  initialCategory = "all",
+  initialSearch = "",
+  initialConcern = "all",
+}: CatalogPageProps) {
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [selectedConcern, setSelectedConcern] = useState("all");
+  const [selectedConcern, setSelectedConcern] = useState(initialConcern);
   const [selectedSkinType, setSelectedSkinType] = useState("all");
   const [availability, setAvailability] = useState("all");
   const [sortBy, setSortBy] = useState<SortOption>("best-sellers");
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
 
   const deferredCategory = useDeferredValue(selectedCategory);
   const deferredConcern = useDeferredValue(selectedConcern);
   const deferredSkinType = useDeferredValue(selectedSkinType);
   const deferredAvailability = useDeferredValue(availability);
   const deferredSort = useDeferredValue(sortBy);
+  const deferredSearch = useDeferredValue(searchTerm.trim().toLowerCase());
 
   const { data = [] } = useQuery({
     queryKey: ["catalog-products"],
@@ -52,8 +60,27 @@ export function CatalogPage({ initialCategory = "all" }: CatalogPageProps) {
       const matchesAvailability =
         deferredAvailability === "all" ||
         (deferredAvailability === "in-stock" ? product.stock > 0 : product.stock === 0);
+      const matchesSearch =
+        deferredSearch.length === 0 ||
+        [
+          product.name,
+          product.brand,
+          product.category,
+          product.highlight,
+          ...product.ingredients,
+          ...product.concerns,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(deferredSearch);
 
-      return matchesCategory && matchesConcern && matchesSkinType && matchesAvailability;
+      return (
+        matchesCategory &&
+        matchesConcern &&
+        matchesSkinType &&
+        matchesAvailability &&
+        matchesSearch
+      );
     });
 
     return catalog.sort((left, right) => {
@@ -71,7 +98,15 @@ export function CatalogPage({ initialCategory = "all" }: CatalogPageProps) {
           return Number(right.bestSeller) - Number(left.bestSeller);
       }
     });
-  }, [data, deferredAvailability, deferredCategory, deferredConcern, deferredSkinType, deferredSort]);
+  }, [
+    data,
+    deferredAvailability,
+    deferredCategory,
+    deferredConcern,
+    deferredSearch,
+    deferredSkinType,
+    deferredSort,
+  ]);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
@@ -152,22 +187,36 @@ export function CatalogPage({ initialCategory = "all" }: CatalogPageProps) {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">Catalogo</p>
             <h2 className="mt-2 font-serif text-3xl text-stone-900">Skincare con criterio y foco de compra</h2>
-            <p className="mt-3 text-sm text-stone-600">{filteredProducts.length} productos visibles</p>
+            <p className="mt-3 text-sm text-stone-600">
+              {filteredProducts.length} productos visibles
+              {deferredSearch ? ` para "${deferredSearch}"` : ""}
+            </p>
           </div>
-          <label className="block min-w-[220px]">
-            <span className="text-sm font-semibold text-stone-900">Ordenar por</span>
-            <select
-              className="mt-3 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700"
-              onChange={(event) => setSortBy(event.target.value as SortOption)}
-              value={sortBy}
-            >
-              <option value="best-sellers">Mas vendidos</option>
-              <option value="newest">Mas recientes</option>
-              <option value="price-asc">Precio ascendente</option>
-              <option value="price-desc">Precio descendente</option>
-              <option value="featured">Destacados</option>
-            </select>
-          </label>
+          <div className="grid w-full gap-4 sm:max-w-[520px] sm:grid-cols-[1fr_220px]">
+            <label className="block">
+              <span className="text-sm font-semibold text-stone-900">Busqueda</span>
+              <input
+                className="mt-3 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700"
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar por marca, producto o ingrediente"
+                value={searchTerm}
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-semibold text-stone-900">Ordenar por</span>
+              <select
+                className="mt-3 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700"
+                onChange={(event) => setSortBy(event.target.value as SortOption)}
+                value={sortBy}
+              >
+                <option value="best-sellers">Mas vendidos</option>
+                <option value="newest">Mas recientes</option>
+                <option value="price-asc">Precio ascendente</option>
+                <option value="price-desc">Precio descendente</option>
+                <option value="featured">Destacados</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -179,4 +228,3 @@ export function CatalogPage({ initialCategory = "all" }: CatalogPageProps) {
     </div>
   );
 }
-

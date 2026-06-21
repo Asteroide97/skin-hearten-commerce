@@ -23,10 +23,13 @@ body {
   min-height: 100vh;
   font-family: var(--font-inter), sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(248, 226, 228, 0.8), transparent 28%),
-    radial-gradient(circle at right 20%, rgba(239, 229, 217, 0.7), transparent 30%),
+    radial-gradient(circle at top left, rgba(248, 226, 228, 0.92), transparent 26%),
+    radial-gradient(circle at right 16%, rgba(239, 229, 217, 0.88), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(245, 236, 231, 0.85), transparent 24%),
     var(--color-canvas);
   color: var(--color-ink);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -52,4 +55,9 @@ img {
 
 .font-serif {
   font-family: var(--font-playfair), serif;
+}
+
+::selection {
+  background: rgba(236, 204, 193, 0.65);
+  color: var(--color-ink);
 }
