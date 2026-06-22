@@ -103,6 +103,38 @@ export type AnalyticsEventMap = {
       | "luminosidad"
       | "proteccion_solar";
   };
+  skin_quiz_lead_sync_started: {
+    source: SkinQuizAnalyticsSource;
+    goal:
+      | "manchas"
+      | "acne"
+      | "lineas_expresion"
+      | "hidratacion"
+      | "luminosidad"
+      | "proteccion_solar";
+  };
+  skin_quiz_lead_sync_success: {
+    source: SkinQuizAnalyticsSource;
+    goal:
+      | "manchas"
+      | "acne"
+      | "lineas_expresion"
+      | "hidratacion"
+      | "luminosidad"
+      | "proteccion_solar";
+    lead_id: number;
+  };
+  skin_quiz_lead_sync_failed: {
+    source: SkinQuizAnalyticsSource;
+    goal:
+      | "manchas"
+      | "acne"
+      | "lineas_expresion"
+      | "hidratacion"
+      | "luminosidad"
+      | "proteccion_solar";
+    reason: string;
+  };
 };
 
 export type AnalyticsEventName = keyof AnalyticsEventMap;

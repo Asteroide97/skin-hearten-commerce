@@ -12,6 +12,7 @@ from app.api.routes import (
     orders,
     payments,
     products,
+    skin_quiz,
 )
 
 __all__ = [
@@ -28,5 +29,5 @@ __all__ = [
     "orders",
     "payments",
     "products",
+    "skin_quiz",
 ]
-

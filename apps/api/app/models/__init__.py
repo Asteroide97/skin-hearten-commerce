@@ -3,6 +3,7 @@ from app.models.catalog import Brand, Category, Product, ProductImage
 from app.models.commerce import Cart, CartItem, Coupon, CouponUsage, InventoryMovement, Order, OrderItem, Payment
 from app.models.content import BlogPost, Setting
 from app.models.identity import Customer, CustomerAddress, Role, User
+from app.models.marketing import SkinQuizLead
 
 __all__ = [
     "Base",
@@ -22,7 +23,7 @@ __all__ = [
     "Product",
     "ProductImage",
     "Role",
+    "SkinQuizLead",
     "Setting",
     "User",
 ]
-

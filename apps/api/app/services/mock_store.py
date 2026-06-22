@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import datetime, timezone
 
 from app.core.security import get_password_hash
 
@@ -125,6 +126,8 @@ ORDERS = [
         ],
     }
 ]
+
+SKIN_QUIZ_LEADS: list[dict] = []
 
 
 def list_products() -> list[dict]:
@@ -280,3 +283,13 @@ def delete_entity(collection: list[dict], entity_id: int) -> bool:
     collection.pop(index)
     return True
 
+
+def create_skin_quiz_lead(payload: dict) -> dict:
+    next_id = max(lead["id"] for lead in SKIN_QUIZ_LEADS) + 1 if SKIN_QUIZ_LEADS else 1
+    lead = {
+        "id": next_id,
+        "created_at": datetime.now(timezone.utc),
+        **payload,
+    }
+    SKIN_QUIZ_LEADS.append(lead)
+    return deepcopy(lead)

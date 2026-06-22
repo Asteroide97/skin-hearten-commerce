@@ -3,6 +3,7 @@ import type { Product } from "@/lib/types";
 export const SKIN_QUIZ_COMPLETED_KEY = "skin_quiz_completed";
 export const SKIN_QUIZ_DISMISSED_UNTIL_KEY = "skin_quiz_dismissed_until";
 export const SKIN_QUIZ_LEAD_KEY = "skin_quiz_lead";
+export const SKIN_QUIZ_LEAD_SYNCED_KEY = "skin_quiz_lead_synced";
 export const SKIN_QUIZ_RESULT_KEY = "skin_quiz_result";
 export const SKIN_QUIZ_WHATSAPP_MESSAGE =
   "Hola, hice el Skin Quiz y quiero recibir ayuda con mi rutina recomendada.";
@@ -80,6 +81,11 @@ export type SkinQuizLeadInput = {
 export type SkinQuizLead = SkinQuizLeadInput & {
   createdAt: string;
   quizResult: SkinQuizResult;
+};
+
+export type SkinQuizLeadSyncResponse = {
+  id: number;
+  createdAt: string;
 };
 
 type BrowserStorage = {
@@ -381,6 +387,15 @@ export function saveSkinQuizLead(lead: SkinQuizLead) {
   storage.setItem(SKIN_QUIZ_LEAD_KEY, JSON.stringify(lead));
 }
 
+export function saveSkinQuizLeadSyncStatus(isSynced: boolean) {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  storage.setItem(SKIN_QUIZ_LEAD_SYNCED_KEY, String(isSynced));
+}
+
 export function clearSkinQuizDismissal() {
   const storage = getStorage();
   if (!storage) {
@@ -548,4 +563,72 @@ export function getSkinQuizDismissedWindow() {
 
 export function getSkinQuizWhatsAppHref() {
   return `https://wa.me/${SKIN_QUIZ_WHATSAPP_NUMBER}?text=${encodeURIComponent(SKIN_QUIZ_WHATSAPP_MESSAGE)}`;
+}
+
+function getSkinQuizLeadEndpoint() {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!apiUrl) {
+    return null;
+  }
+
+  return `${apiUrl.replace(/\/$/, "")}/skin-quiz/leads`;
+}
+
+export async function syncSkinQuizLeadToApi(
+  lead: SkinQuizLead,
+  source: SkinQuizOpenSource,
+): Promise<
+  | { ok: true; data: SkinQuizLeadSyncResponse }
+  | { ok: false; reason: "api_url_missing" | "fetch_failed" | "invalid_response"; detail?: string }
+> {
+  const endpoint = getSkinQuizLeadEndpoint();
+  if (!endpoint) {
+    return { ok: false, reason: "api_url_missing" };
+  }
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: lead.name,
+        whatsapp: lead.whatsapp,
+        email: lead.email.trim().length > 0 ? lead.email : null,
+        acceptedMarketing: lead.acceptedMarketing,
+        answers: lead.quizResult.answers,
+        quizResult: lead.quizResult,
+        source,
+      }),
+      keepalive: true,
+    });
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        reason: "fetch_failed",
+        detail: `status_${response.status}`,
+      };
+    }
+
+    const data = (await response.json()) as Partial<SkinQuizLeadSyncResponse>;
+    if (typeof data.id !== "number" || typeof data.createdAt !== "string") {
+      return { ok: false, reason: "invalid_response" };
+    }
+
+    return {
+      ok: true,
+      data: {
+        id: data.id,
+        createdAt: data.createdAt,
+      },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: "fetch_failed",
+      detail: error instanceof Error ? error.message : "unknown_error",
+    };
+  }
 }

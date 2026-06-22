@@ -14,6 +14,7 @@ from app.api.routes import (
     orders,
     payments,
     products,
+    skin_quiz,
 )
 
 api_router = APIRouter()
@@ -26,8 +27,8 @@ api_router.include_router(checkout.router, tags=["checkout"])
 api_router.include_router(payments.router, tags=["payments"])
 api_router.include_router(orders.router, tags=["orders"])
 api_router.include_router(blog.router, tags=["blog"])
+api_router.include_router(skin_quiz.router, tags=["skin-quiz"])
 api_router.include_router(admin_products.router, tags=["admin-products"])
 api_router.include_router(admin_categories.router, tags=["admin-categories"])
 api_router.include_router(admin_brands.router, tags=["admin-brands"])
 api_router.include_router(admin_orders.router, tags=["admin-orders"])
-

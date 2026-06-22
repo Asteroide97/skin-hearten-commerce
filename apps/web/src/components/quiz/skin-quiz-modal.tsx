@@ -16,9 +16,11 @@ import {
   readStoredSkinQuizResult,
   readStoredSkinQuizLead,
   saveSkinQuizLead,
+  saveSkinQuizLeadSyncStatus,
   saveSkinQuizResult,
   shouldAutoOpenSkinQuiz,
   skinQuizQuestions,
+  syncSkinQuizLeadToApi,
   type SkinQuizAnswers,
   type SkinQuizLead,
   type SkinQuizLeadInput,
@@ -160,6 +162,31 @@ export function SkinQuizModal() {
     trackEvent("skin_quiz_started", { source });
   }
 
+  const syncLeadToBackend = useCallback(async (lead: SkinQuizLead) => {
+    trackEvent("skin_quiz_lead_sync_started", {
+      goal: lead.quizResult.answers.goal,
+      source,
+    });
+
+    const syncResult = await syncSkinQuizLeadToApi(lead, source);
+    if (syncResult.ok) {
+      saveSkinQuizLeadSyncStatus(true);
+      trackEvent("skin_quiz_lead_sync_success", {
+        goal: lead.quizResult.answers.goal,
+        lead_id: syncResult.data.id,
+        source,
+      });
+      return;
+    }
+
+    saveSkinQuizLeadSyncStatus(false);
+    trackEvent("skin_quiz_lead_sync_failed", {
+      goal: lead.quizResult.answers.goal,
+      reason: syncResult.detail ?? syncResult.reason,
+      source,
+    });
+  }, [source]);
+
   function showResult(nextResult: SkinQuizResultValue) {
     saveSkinQuizResult(nextResult);
     setPendingResult(null);
@@ -223,6 +250,7 @@ export function SkinQuizModal() {
     };
 
     saveSkinQuizLead(lead);
+    saveSkinQuizLeadSyncStatus(false);
     setStoredLead(lead);
     trackEvent("skin_quiz_lead_captured", {
       accepted_marketing: lead.acceptedMarketing,
@@ -231,6 +259,7 @@ export function SkinQuizModal() {
       source,
     });
     showResult(pendingResult);
+    void syncLeadToBackend(lead);
   }
 
   function handleLeadSkipped() {
