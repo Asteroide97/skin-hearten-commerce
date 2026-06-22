@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { trackEvent } from "@/lib/analytics";
 import { useCartStore } from "@/store/cart-store";
 
 type AddToCartButtonProps = {
@@ -29,6 +30,12 @@ export function AddToCartButton({
       className={className ?? "rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"}
       onClick={() => {
         addItem({ productId, slug, name, price });
+        trackEvent("add_to_cart", {
+          product_id: productId,
+          product_name: name,
+          quantity: 1,
+          price,
+        });
         setAdded(true);
         window.setTimeout(() => setAdded(false), 1400);
       }}

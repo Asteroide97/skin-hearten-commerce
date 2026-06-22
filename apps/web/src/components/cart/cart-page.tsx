@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { trackEvent } from "@/lib/analytics";
 import { formatCurrency } from "@/lib/format";
 import {
   getCartDiscount,
+  getCartItemCount,
   getCartShipping,
   getCartSubtotal,
   getCartTotal,
@@ -24,6 +26,7 @@ export function CartPage() {
     [couponCode, subtotal],
   );
   const total = useMemo(() => getCartTotal(subtotal, discount, shipping), [discount, shipping, subtotal]);
+  const itemCount = useMemo(() => getCartItemCount(items), [items]);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
@@ -123,6 +126,12 @@ export function CartPage() {
         <Link
           className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white disabled:bg-stone-300"
           href="/checkout"
+          onClick={() => {
+            trackEvent("checkout_started", {
+              cart_total: total,
+              item_count: itemCount,
+            });
+          }}
         >
           Finalizar compra
         </Link>
@@ -130,4 +139,3 @@ export function CartPage() {
     </div>
   );
 }
-

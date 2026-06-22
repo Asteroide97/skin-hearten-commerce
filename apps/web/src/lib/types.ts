@@ -74,6 +74,7 @@ export type SkinNeed = {
   href: string;
   accent: string;
   eyebrow: string;
+  analyticsNeed: import("@/lib/analytics").NeedAnalyticsValue;
 };
 
 export type DashboardMetric = {

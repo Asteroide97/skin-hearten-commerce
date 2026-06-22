@@ -394,6 +394,7 @@ export const shopNeeds: SkinNeed[] = [
     href: "/productos?problema=Acne",
     accent: "from-stone-100 via-white to-rose-50",
     eyebrow: "Brotes y textura",
+    analyticsNeed: "acne",
   },
   {
     id: "need-manchas",
@@ -402,6 +403,7 @@ export const shopNeeds: SkinNeed[] = [
     href: "/productos?problema=Manchas",
     accent: "from-amber-100 via-white to-orange-50",
     eyebrow: "Tono desigual",
+    analyticsNeed: "manchas",
   },
   {
     id: "need-antiedad",
@@ -410,6 +412,7 @@ export const shopNeeds: SkinNeed[] = [
     href: "/productos?problema=Firmeza",
     accent: "from-rose-100 via-white to-stone-100",
     eyebrow: "Firmeza",
+    analyticsNeed: "antiedad",
   },
   {
     id: "need-hidratacion",
@@ -418,6 +421,7 @@ export const shopNeeds: SkinNeed[] = [
     href: "/productos?problema=Deshidratacion",
     accent: "from-white via-rose-50 to-orange-50",
     eyebrow: "Confort diario",
+    analyticsNeed: "hidratacion",
   },
   {
     id: "need-sensitive",
@@ -426,6 +430,7 @@ export const shopNeeds: SkinNeed[] = [
     href: "/productos?problema=Sensibilidad",
     accent: "from-stone-100 via-white to-amber-50",
     eyebrow: "Calma visible",
+    analyticsNeed: "piel_sensible",
   },
   {
     id: "need-sunscreen",
@@ -434,6 +439,7 @@ export const shopNeeds: SkinNeed[] = [
     href: "/productos?categoria=protector-solar",
     accent: "from-yellow-50 via-white to-rose-50",
     eyebrow: "Uso diario",
+    analyticsNeed: "protector_solar",
   },
 ];
 

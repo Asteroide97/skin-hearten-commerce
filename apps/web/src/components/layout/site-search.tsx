@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { SearchIcon } from "@/components/shared/icons";
+import { trackEvent } from "@/lib/analytics";
 
 type SiteSearchProps = {
   className?: string;
@@ -19,6 +20,12 @@ export function SiteSearch({ className }: SiteSearchProps) {
       onSubmit={(event) => {
         event.preventDefault();
         const normalized = query.trim();
+        if (normalized.length > 0) {
+          trackEvent("search_used", {
+            query: normalized,
+            source: "header",
+          });
+        }
         const href = normalized ? `/productos?q=${encodeURIComponent(normalized)}` : "/productos";
         router.push(href);
       }}

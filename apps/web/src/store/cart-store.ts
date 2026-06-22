@@ -29,6 +29,10 @@ export function getCartSubtotal(items: CartItem[]) {
   return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 }
 
+export function getCartItemCount(items: CartItem[]) {
+  return items.reduce((sum, item) => sum + item.quantity, 0);
+}
+
 export function getCartDiscount(subtotal: number, discountRate: number) {
   return subtotal * discountRate;
 }
@@ -89,4 +93,3 @@ export const useCartStore = create<CartState>((set) => ({
   },
   clearCart: () => set({ items: [], couponCode: undefined, discountRate: 0 }),
 }));
-

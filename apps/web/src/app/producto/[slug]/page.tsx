@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { AddToCartButton } from "@/components/store/add-to-cart-button";
 import { ProductCard } from "@/components/store/product-card";
+import { ProductViewTracker } from "@/components/store/product-view-tracker";
 import { formatCurrency } from "@/lib/format";
 import { getProductBySlug, products } from "@/lib/site-data";
 
@@ -44,6 +45,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
   return (
     <div className="mx-auto max-w-7xl space-y-12 px-5 py-8 sm:px-6 lg:px-8">
+      <ProductViewTracker
+        category={product.category}
+        price={product.price}
+        productId={product.id}
+        productName={product.name}
+      />
       <section className="grid gap-8 lg:grid-cols-[1fr_1fr]">
         <div className="grid gap-4 sm:grid-cols-2">
           {product.images.map((image, index) => (
@@ -148,4 +155,3 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     </div>
   );
 }
-

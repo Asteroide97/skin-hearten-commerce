@@ -4,10 +4,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 
+import { trackEvent } from "@/lib/analytics";
 import { formatCurrency } from "@/lib/format";
 import { checkoutSchema, type CheckoutValues } from "@/schemas/checkout";
 import {
   getCartDiscount,
+  getCartItemCount,
   getCartShipping,
   getCartSubtotal,
   getCartTotal,
@@ -28,6 +30,7 @@ export function CheckoutForm() {
   const discount = getCartDiscount(subtotal, discountRate);
   const shipping = couponCode === "ENVIOGRATIS" ? 0 : getCartShipping(subtotal);
   const total = getCartTotal(subtotal, discount, shipping);
+  const itemCount = getCartItemCount(items);
 
   const form = useForm<CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
@@ -60,7 +63,12 @@ export function CheckoutForm() {
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <form
         className="soft-panel space-y-6 rounded-[1.8rem] p-6"
-        onSubmit={form.handleSubmit(() => {
+        onSubmit={form.handleSubmit((values) => {
+          trackEvent("purchase_attempted", {
+            payment_method: values.paymentMethod,
+            cart_total: total,
+            item_count: itemCount,
+          });
           startTransition(() => {
             clearCart();
             setSubmitted(true);
@@ -171,4 +179,3 @@ function Field({ label, name, register, error }: FieldProps) {
     </label>
   );
 }
-
