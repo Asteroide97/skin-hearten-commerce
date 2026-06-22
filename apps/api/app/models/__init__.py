@@ -12,6 +12,7 @@ from app.models.crm import (
     CRMReminder,
     CRMTask,
 )
+from app.models.imports import ImportJob
 from app.models.identity import Customer, CustomerAddress, Role, User
 from app.models.marketing import SkinQuizLead
 
@@ -33,6 +34,7 @@ __all__ = [
     "CRMNote",
     "CRMReminder",
     "CRMTask",
+    "ImportJob",
     "BlogPost",
     "InventoryMovement",
     "Order",

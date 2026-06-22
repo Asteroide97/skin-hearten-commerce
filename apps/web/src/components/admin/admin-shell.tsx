@@ -8,6 +8,7 @@ const sections = [
   { href: "/admin/productos", label: "Productos" },
   { href: "/admin/pedidos", label: "Pedidos" },
   { href: "/admin/clientes", label: "Clientes" },
+  { href: "/admin/imports/shopify", label: "Importar Shopify" },
   { href: "/admin/crm", label: "CRM" },
   { href: "/admin/crm/reminders", label: "Recordatorios" },
   { href: "/admin/crm/templates", label: "Plantillas CRM" },

@@ -355,6 +355,7 @@ CUSTOMERS = [
         "hashed_password": get_password_hash("Cliente123!"),
     }
 ]
+CUSTOMER_ADDRESSES: list[dict] = []
 
 CARTS: dict[int, dict] = {
     1: {
@@ -448,6 +449,7 @@ CRM_AUTOMATION_RULES: list[dict] = []
 CRM_AUTOMATION_RUNS: list[dict] = []
 CRM_MESSAGE_TEMPLATES: list[dict] = []
 CRM_REMINDERS: list[dict] = []
+IMPORT_JOBS: list[dict] = []
 
 
 def list_products() -> list[dict]:
@@ -521,6 +523,59 @@ def upsert_mock_customer_from_checkout(
             "hashed_password": get_password_hash(f"checkout-{email.lower()}"),
         }
     )
+
+
+def upsert_mock_customer(
+    *,
+    email: str,
+    first_name: str,
+    last_name: str,
+    phone: str | None = None,
+    hashed_password: str | None = None,
+) -> dict:
+    customer = next((entry for entry in CUSTOMERS if entry["email"].lower() == email.lower()), None)
+    if customer:
+        customer.update(
+            {
+                "first_name": first_name,
+                "last_name": last_name,
+                "phone": phone,
+            }
+        )
+        if hashed_password:
+            customer["hashed_password"] = hashed_password
+        return deepcopy(customer)
+
+    return create_mock_customer(
+        {
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "phone": phone,
+            "hashed_password": hashed_password or get_password_hash(f"shopify-{email.lower()}"),
+        }
+    )
+
+
+def upsert_mock_customer_address(payload: dict) -> dict:
+    existing = next(
+        (
+            entry
+            for entry in CUSTOMER_ADDRESSES
+            if entry["customer_id"] == payload["customer_id"]
+            and entry["address_line1"] == payload["address_line1"]
+            and entry["postal_code"] == payload["postal_code"]
+        ),
+        None,
+    )
+    if existing:
+        existing.update(payload)
+        return deepcopy(existing)
+
+    next_id = max(address["id"] for address in CUSTOMER_ADDRESSES) + 1 if CUSTOMER_ADDRESSES else 1
+    address = {"id": next_id, **payload}
+    CUSTOMER_ADDRESSES.append(address)
+    return deepcopy(address)
 
 
 def get_cart(customer_id: int) -> dict:
@@ -1119,6 +1174,41 @@ def list_crm_reminders(
         filtered.append(reminder)
 
     return sorted(filtered, key=lambda reminder: reminder.get("scheduled_for") or reminder["created_at"])
+
+
+def create_import_job(payload: dict) -> dict:
+    next_id = max(job["id"] for job in IMPORT_JOBS) + 1 if IMPORT_JOBS else 1
+    job = {
+        "id": next_id,
+        "created_at": datetime.now(timezone.utc),
+        "completed_at": payload.get("completed_at"),
+        "notes": payload.get("notes"),
+        **payload,
+    }
+    IMPORT_JOBS.append(job)
+    return deepcopy(job)
+
+
+def get_import_job(job_id: int) -> dict | None:
+    job = next((entry for entry in IMPORT_JOBS if entry["id"] == job_id), None)
+    if not job:
+        return None
+    return deepcopy(job)
+
+
+def update_import_job(job_id: int, payload: dict) -> dict | None:
+    job = next((entry for entry in IMPORT_JOBS if entry["id"] == job_id), None)
+    if not job:
+        return None
+
+    job.update(payload)
+    return deepcopy(job)
+
+
+def list_import_jobs() -> list[dict]:
+    jobs = [deepcopy(job) for job in IMPORT_JOBS]
+    jobs.sort(key=lambda job: job.get("created_at") or datetime.now(timezone.utc), reverse=True)
+    return jobs
 
 
 def create_product(payload: dict) -> dict:
