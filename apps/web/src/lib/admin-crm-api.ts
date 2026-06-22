@@ -8,8 +8,17 @@ import type {
   CRMContactFilters,
   CRMContactSummary,
   CRMContactUpdateInput,
+  CRMMessageTemplate,
+  CRMMessageTemplatePreviewInput,
+  CRMMessageTemplatePreviewResult,
+  CRMMessageTemplateUpdateInput,
   CRMNote,
   CRMNoteCreateInput,
+  CRMReminderCreateInput,
+  CRMReminderDetail,
+  CRMReminderFilters,
+  CRMReminderSummary,
+  CRMReminderUpdateInput,
   CRMTask,
   CRMTaskCreateInput,
   CRMTaskUpdateInput,
@@ -35,10 +44,17 @@ type AdminApiFailure = {
 
 type AdminApiResult<TData> = AdminApiSuccess<TData> | AdminApiFailure;
 
+type QueryValue = string | number | boolean | null | undefined;
+type QueryParams = Record<string, QueryValue>;
+
 type RequestBody =
-  | CRMContactUpdateInput
   | CRMAutomationRuleUpdateInput
+  | CRMContactUpdateInput
+  | CRMMessageTemplatePreviewInput
+  | CRMMessageTemplateUpdateInput
   | CRMNoteCreateInput
+  | CRMReminderCreateInput
+  | CRMReminderUpdateInput
   | CRMTaskCreateInput
   | CRMTaskUpdateInput
   | Record<string, unknown>;
@@ -85,8 +101,8 @@ async function requestAdminJson<TData>(
   path: string,
   options?: {
     body?: RequestBody;
-    filters?: CRMContactFilters;
     method?: "GET" | "PATCH" | "POST";
+    query?: QueryParams;
   },
 ): Promise<AdminApiResult<TData>> {
   const apiBaseUrl = getApiBaseUrl();
@@ -101,11 +117,15 @@ async function requestAdminJson<TData>(
     }
 
     const url = new URL(`${apiBaseUrl}${path}`);
-    if (options?.filters) {
-      for (const [key, value] of Object.entries(options.filters)) {
-        if (typeof value === "string" && value.trim().length > 0) {
-          url.searchParams.set(key, value.trim());
+    if (options?.query) {
+      for (const [key, value] of Object.entries(options.query)) {
+        if (value === null || value === undefined) {
+          continue;
         }
+        if (typeof value === "string" && value.trim().length === 0) {
+          continue;
+        }
+        url.searchParams.set(key, String(value));
       }
     }
 
@@ -135,7 +155,7 @@ async function requestAdminJson<TData>(
 }
 
 export async function listAdminCrmContacts(filters?: CRMContactFilters) {
-  return requestAdminJson<CRMContactSummary[]>("/admin/crm/contacts", { filters });
+  return requestAdminJson<CRMContactSummary[]>("/admin/crm/contacts", { query: filters });
 }
 
 export async function getAdminCrmContactDetail(contactId: number) {
@@ -170,6 +190,67 @@ export async function updateAdminCrmTask(taskId: number, payload: CRMTaskUpdateI
   });
 }
 
+export async function createAdminCrmReminder(contactId: number, payload: CRMReminderCreateInput) {
+  return requestAdminJson<CRMReminderDetail>(`/admin/crm/contacts/${contactId}/reminders`, {
+    body: payload,
+    method: "POST",
+  });
+}
+
+export async function listAdminCrmReminders(filters?: CRMReminderFilters) {
+  return requestAdminJson<CRMReminderSummary[]>("/admin/crm/reminders", { query: filters });
+}
+
+export async function getAdminCrmReminderDetail(reminderId: number) {
+  return requestAdminJson<CRMReminderDetail>(`/admin/crm/reminders/${reminderId}`);
+}
+
+export async function updateAdminCrmReminder(reminderId: number, payload: CRMReminderUpdateInput) {
+  return requestAdminJson<CRMReminderDetail>(`/admin/crm/reminders/${reminderId}`, {
+    body: payload,
+    method: "PATCH",
+  });
+}
+
+export async function markAdminCrmReminderSentManual(reminderId: number) {
+  return requestAdminJson<CRMReminderDetail>(`/admin/crm/reminders/${reminderId}/mark-sent-manual`, {
+    method: "POST",
+  });
+}
+
+export async function skipAdminCrmReminder(reminderId: number) {
+  return requestAdminJson<CRMReminderDetail>(`/admin/crm/reminders/${reminderId}/skip`, {
+    method: "POST",
+  });
+}
+
+export async function listAdminCrmMessageTemplates() {
+  return requestAdminJson<CRMMessageTemplate[]>("/admin/crm/message-templates");
+}
+
+export async function updateAdminCrmMessageTemplate(
+  templateId: number,
+  payload: CRMMessageTemplateUpdateInput,
+) {
+  return requestAdminJson<CRMMessageTemplate>(`/admin/crm/message-templates/${templateId}`, {
+    body: payload,
+    method: "PATCH",
+  });
+}
+
+export async function previewAdminCrmMessageTemplate(
+  templateId: number,
+  payload: CRMMessageTemplatePreviewInput,
+) {
+  return requestAdminJson<CRMMessageTemplatePreviewResult>(
+    `/admin/crm/message-templates/${templateId}/preview`,
+    {
+      body: payload,
+      method: "POST",
+    },
+  );
+}
+
 export async function listAdminCrmAutomationRules() {
   return requestAdminJson<CRMAutomationRule[]>("/admin/crm/automations/rules");
 }
@@ -185,5 +266,7 @@ export async function updateAdminCrmAutomationRule(
 }
 
 export async function listAdminCrmAutomationRuns(limit = 50) {
-  return requestAdminJson<CRMAutomationRun[]>(`/admin/crm/automations/runs?limit=${limit}`);
+  return requestAdminJson<CRMAutomationRun[]>("/admin/crm/automations/runs", {
+    query: { limit },
+  });
 }

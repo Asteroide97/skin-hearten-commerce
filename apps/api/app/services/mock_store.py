@@ -413,6 +413,8 @@ CRM_NOTES: list[dict] = []
 CRM_TASKS: list[dict] = []
 CRM_AUTOMATION_RULES: list[dict] = []
 CRM_AUTOMATION_RUNS: list[dict] = []
+CRM_MESSAGE_TEMPLATES: list[dict] = []
+CRM_REMINDERS: list[dict] = []
 
 
 def list_products() -> list[dict]:
@@ -900,6 +902,156 @@ def list_crm_automation_runs(limit: int | None = None) -> list[dict]:
     runs = [deepcopy(run) for run in CRM_AUTOMATION_RUNS]
     runs.sort(key=lambda run: run["created_at"], reverse=True)
     return runs[:limit] if limit is not None else runs
+
+
+def list_crm_message_templates() -> list[dict]:
+    return sorted(
+        [deepcopy(template) for template in CRM_MESSAGE_TEMPLATES],
+        key=lambda template: template.get("created_at") or datetime.now(timezone.utc),
+    )
+
+
+def get_crm_message_template(template_id: int) -> dict | None:
+    template = next((entry for entry in CRM_MESSAGE_TEMPLATES if entry["id"] == template_id), None)
+    if not template:
+        return None
+    return deepcopy(template)
+
+
+def get_crm_message_template_by_name(name: str) -> dict | None:
+    template = next((entry for entry in CRM_MESSAGE_TEMPLATES if entry["name"] == name), None)
+    if not template:
+        return None
+    return deepcopy(template)
+
+
+def create_crm_message_template(payload: dict) -> dict:
+    next_id = max(template["id"] for template in CRM_MESSAGE_TEMPLATES) + 1 if CRM_MESSAGE_TEMPLATES else 1
+    now = datetime.now(timezone.utc)
+    template = {
+        "id": next_id,
+        "created_at": now,
+        "updated_at": now,
+        **payload,
+    }
+    CRM_MESSAGE_TEMPLATES.append(template)
+    return deepcopy(template)
+
+
+def update_crm_message_template(template_id: int, payload: dict) -> dict | None:
+    template = next((entry for entry in CRM_MESSAGE_TEMPLATES if entry["id"] == template_id), None)
+    if not template:
+        return None
+
+    for key, value in payload.items():
+        if value is not None or key == "is_active":
+            template[key] = value
+    template["updated_at"] = datetime.now(timezone.utc)
+    return deepcopy(template)
+
+
+def create_crm_reminder(payload: dict) -> dict:
+    next_id = max(reminder["id"] for reminder in CRM_REMINDERS) + 1 if CRM_REMINDERS else 1
+    now = datetime.now(timezone.utc)
+    reminder = {
+        "id": next_id,
+        "created_at": now,
+        "updated_at": now,
+        "sent_manually_at": payload.get("sent_manually_at"),
+        "skipped_at": payload.get("skipped_at"),
+        **payload,
+    }
+    CRM_REMINDERS.append(reminder)
+    return deepcopy(reminder)
+
+
+def get_crm_reminder(reminder_id: int) -> dict | None:
+    reminder = next((entry for entry in CRM_REMINDERS if entry["id"] == reminder_id), None)
+    if not reminder:
+        return None
+    return deepcopy(reminder)
+
+
+def find_crm_reminder(
+    *,
+    channel: str,
+    contact_id: int,
+    reminder_type: str,
+    related_event_id: int | None = None,
+    related_order_id: int | None = None,
+    scheduled_for: datetime | None = None,
+) -> dict | None:
+    for reminder in CRM_REMINDERS:
+        if reminder["contact_id"] != contact_id:
+            continue
+        if reminder["channel"] != channel or reminder["reminder_type"] != reminder_type:
+            continue
+        if reminder.get("related_event_id") != related_event_id:
+            continue
+        if reminder.get("related_order_id") != related_order_id:
+            continue
+        if scheduled_for and reminder.get("scheduled_for") != scheduled_for:
+            continue
+        return deepcopy(reminder)
+    return None
+
+
+def update_crm_reminder(reminder_id: int, payload: dict) -> dict | None:
+    reminder = next((entry for entry in CRM_REMINDERS if entry["id"] == reminder_id), None)
+    if not reminder:
+        return None
+
+    for key, value in payload.items():
+        if value is not None or key in {"rendered_subject", "sent_manually_at", "skipped_at", "status"}:
+            reminder[key] = value
+    reminder["updated_at"] = datetime.now(timezone.utc)
+    return deepcopy(reminder)
+
+
+def list_crm_reminders(
+    *,
+    channel: str | None = None,
+    contact_id: int | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    reminder_type: str | None = None,
+    search: str | None = None,
+    status: str | None = None,
+) -> list[dict]:
+    normalized_search = search.strip().lower() if search else None
+    reminders = [deepcopy(reminder) for reminder in CRM_REMINDERS]
+
+    filtered: list[dict] = []
+    for reminder in reminders:
+        if channel and reminder.get("channel") != channel:
+            continue
+        if contact_id is not None and reminder.get("contact_id") != contact_id:
+            continue
+        if reminder_type and reminder.get("reminder_type") != reminder_type:
+            continue
+        if status and reminder.get("status") != status:
+            continue
+        scheduled_for = reminder.get("scheduled_for")
+        if date_from and scheduled_for and scheduled_for < date_from:
+            continue
+        if date_to and scheduled_for and scheduled_for >= date_to:
+            continue
+        if normalized_search:
+            contact = get_crm_contact(reminder["contact_id"]) or {}
+            haystack = " ".join(
+                [
+                    str(contact.get("first_name") or ""),
+                    str(contact.get("last_name") or ""),
+                    str(contact.get("email") or ""),
+                    str(contact.get("whatsapp") or ""),
+                    str(reminder.get("rendered_body") or ""),
+                ]
+            ).lower()
+            if normalized_search not in haystack:
+                continue
+        filtered.append(reminder)
+
+    return sorted(filtered, key=lambda reminder: reminder.get("scheduled_for") or reminder["created_at"])
 
 
 def create_product(payload: dict) -> dict:

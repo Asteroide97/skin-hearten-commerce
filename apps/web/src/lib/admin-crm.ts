@@ -1,6 +1,15 @@
 export type CRMContactLifecycleStatus = "lead" | "customer" | "repeat_customer" | "inactive";
 export type CRMTaskStatus = "pending" | "done" | "cancelled";
 export type CRMTaskType = "follow_up" | "abandoned_cart" | "repurchase" | "post_purchase" | "manual";
+export type CRMReminderStatus = "pending" | "ready" | "sent_manual" | "skipped" | "cancelled";
+export type CRMReminderChannel = "whatsapp" | "email";
+export type CRMReminderType =
+  | "skin_quiz_follow_up"
+  | "abandoned_cart"
+  | "post_purchase"
+  | "repurchase_30_days"
+  | "customer_inactive"
+  | "manual";
 export type CRMAutomationTriggerType =
   | "skin_quiz_completed"
   | "checkout_completed"
@@ -57,6 +66,52 @@ export type CRMTask = {
   completedAt: string | null;
 };
 
+export type CRMReminderContact = {
+  id: number;
+  firstName: string;
+  lastName: string | null;
+  email: string | null;
+  whatsapp: string | null;
+  mainGoal: string | null;
+  skinType: string | null;
+  acceptedMarketing: boolean;
+};
+
+export type CRMReminderSummary = {
+  id: number;
+  channel: CRMReminderChannel;
+  reminderType: CRMReminderType;
+  status: CRMReminderStatus;
+  scheduledFor: string;
+  renderedSubject: string | null;
+  renderedBody: string;
+  templateId: number | null;
+  templateName: string | null;
+  relatedOrderId: number | null;
+  relatedEventId: number | null;
+  sentManuallyAt: string | null;
+  skippedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  contact: CRMReminderContact;
+};
+
+export type CRMReminderDetail = CRMReminderSummary & {
+  reminderReason: string;
+};
+
+export type CRMMessageTemplate = {
+  id: number;
+  name: string;
+  channel: CRMReminderChannel;
+  reminderType: CRMReminderType;
+  subject: string | null;
+  body: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CRMPurchaseSummary = {
   orderCount: number;
   totalSpent: number;
@@ -67,6 +122,7 @@ export type CRMPurchaseSummary = {
 export type CRMContactDetail = CRMContactSummary & {
   events: CRMEvent[];
   notes: CRMNote[];
+  reminders: CRMReminderSummary[];
   tasks: CRMTask[];
   purchaseSummary: CRMPurchaseSummary;
 };
@@ -77,6 +133,15 @@ export type CRMContactFilters = {
   main_goal?: string;
   search?: string;
   skin_type?: string;
+};
+
+export type CRMReminderFilters = {
+  channel?: CRMReminderChannel;
+  date_from?: string;
+  date_to?: string;
+  reminder_type?: CRMReminderType;
+  search?: string;
+  status?: CRMReminderStatus;
 };
 
 export type CRMContactUpdateInput = {
@@ -98,6 +163,39 @@ export type CRMTaskCreateInput = {
 
 export type CRMTaskUpdateInput = {
   status: CRMTaskStatus;
+};
+
+export type CRMReminderCreateInput = {
+  channel: CRMReminderChannel;
+  scheduledFor: string;
+  renderedSubject?: string | null;
+  renderedBody: string;
+};
+
+export type CRMReminderUpdateInput = {
+  status?: CRMReminderStatus;
+  scheduledFor?: string | null;
+  renderedSubject?: string | null;
+  renderedBody?: string | null;
+};
+
+export type CRMMessageTemplateUpdateInput = {
+  subject?: string | null;
+  body?: string | null;
+  isActive?: boolean;
+};
+
+export type CRMMessageTemplatePreviewInput = {
+  contactId?: number | null;
+  subject?: string | null;
+  body?: string | null;
+  context?: Record<string, string>;
+};
+
+export type CRMMessageTemplatePreviewResult = {
+  renderedSubject: string | null;
+  renderedBody: string;
+  variables: string[];
 };
 
 export type CRMAutomationRule = {
@@ -155,6 +253,37 @@ export const CRM_TASK_TYPE_OPTIONS: Array<{
   { value: "post_purchase", label: "Post compra" },
 ];
 
+export const CRM_REMINDER_STATUS_OPTIONS: Array<{
+  label: string;
+  value: CRMReminderStatus;
+}> = [
+  { value: "pending", label: "Pendiente" },
+  { value: "ready", label: "Lista" },
+  { value: "sent_manual", label: "Enviada manualmente" },
+  { value: "skipped", label: "Omitida" },
+  { value: "cancelled", label: "Cancelada" },
+];
+
+export const CRM_REMINDER_CHANNEL_OPTIONS: Array<{
+  label: string;
+  value: CRMReminderChannel;
+}> = [
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "email", label: "Email" },
+];
+
+export const CRM_REMINDER_TYPE_OPTIONS: Array<{
+  label: string;
+  value: CRMReminderType;
+}> = [
+  { value: "skin_quiz_follow_up", label: "Skin Quiz" },
+  { value: "post_purchase", label: "Post compra" },
+  { value: "repurchase_30_days", label: "Recompra 30 dias" },
+  { value: "customer_inactive", label: "Cliente inactivo" },
+  { value: "abandoned_cart", label: "Checkout abandonado" },
+  { value: "manual", label: "Manual" },
+];
+
 export function buildCrmContactName(contact: Pick<CRMContactSummary, "firstName" | "lastName">) {
   return [contact.firstName, contact.lastName].filter(Boolean).join(" ").trim();
 }
@@ -163,6 +292,20 @@ export function buildCrmWhatsAppHref(whatsapp: string, name: string) {
   const normalizedPhone = whatsapp.replace(/\D/g, "");
   const message = `Hola ${name}, vi tu actividad en Skin Hearten. Quieres que te ayude a completar tu rutina?`;
   return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
+}
+
+export function buildCrmReminderWhatsAppHref(whatsapp: string, message: string) {
+  const normalizedPhone = whatsapp.replace(/\D/g, "");
+  return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
+}
+
+export function buildCrmReminderMailtoHref(email: string, subject: string | null, body: string) {
+  const params = new URLSearchParams();
+  if (subject) {
+    params.set("subject", subject);
+  }
+  params.set("body", body);
+  return `mailto:${email}?${params.toString()}`;
 }
 
 export function getCrmLifecycleStatusLabel(status: CRMContactLifecycleStatus) {
@@ -183,6 +326,18 @@ export function getCrmTaskStatusLabel(status: CRMTaskStatus) {
 
 export function getCrmTaskTypeLabel(type: CRMTaskType) {
   return CRM_TASK_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? type;
+}
+
+export function getCrmReminderStatusLabel(status: CRMReminderStatus) {
+  return CRM_REMINDER_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
+}
+
+export function getCrmReminderChannelLabel(channel: CRMReminderChannel) {
+  return CRM_REMINDER_CHANNEL_OPTIONS.find((option) => option.value === channel)?.label ?? channel;
+}
+
+export function getCrmReminderTypeLabel(type: CRMReminderType) {
+  return CRM_REMINDER_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? type;
 }
 
 export function getCrmAutomationTriggerLabel(trigger: CRMAutomationTriggerType) {

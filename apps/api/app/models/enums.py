@@ -76,3 +76,25 @@ class CRMAutomationRunStatus(StrEnum):
     EXECUTED = "executed"
     SKIPPED = "skipped"
     FAILED = "failed"
+
+
+class CRMReminderStatus(StrEnum):
+    PENDING = "pending"
+    READY = "ready"
+    SENT_MANUAL = "sent_manual"
+    SKIPPED = "skipped"
+    CANCELLED = "cancelled"
+
+
+class CRMReminderChannel(StrEnum):
+    WHATSAPP = "whatsapp"
+    EMAIL = "email"
+
+
+class CRMReminderType(StrEnum):
+    SKIN_QUIZ_FOLLOW_UP = "skin_quiz_follow_up"
+    ABANDONED_CART = "abandoned_cart"
+    POST_PURCHASE = "post_purchase"
+    REPURCHASE_30_DAYS = "repurchase_30_days"
+    CUSTOMER_INACTIVE = "customer_inactive"
+    MANUAL = "manual"

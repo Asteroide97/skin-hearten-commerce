@@ -9,6 +9,9 @@ from app.models.base import Base
 from app.models.enums import (
     CRMAutomationRunStatus,
     CRMAutomationTriggerType,
+    CRMReminderChannel,
+    CRMReminderStatus,
+    CRMReminderType,
     CRMLifecycleStatus,
     CRMTaskStatus,
     CRMTaskType,
@@ -112,3 +115,37 @@ class CRMAutomationRun(Base):
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_message: Mapped[str | None] = mapped_column(Text())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CRMMessageTemplate(TimestampMixin, Base):
+    __tablename__ = "crm_message_templates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(160), unique=True, index=True)
+    channel: Mapped[CRMReminderChannel] = mapped_column(Enum(CRMReminderChannel))
+    reminder_type: Mapped[CRMReminderType] = mapped_column(Enum(CRMReminderType))
+    subject: Mapped[str | None] = mapped_column(String(255))
+    body: Mapped[str] = mapped_column(Text())
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+
+
+class CRMReminder(TimestampMixin, Base):
+    __tablename__ = "crm_reminders"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    contact_id: Mapped[int] = mapped_column(ForeignKey("crm_contacts.id"))
+    channel: Mapped[CRMReminderChannel] = mapped_column(Enum(CRMReminderChannel))
+    reminder_type: Mapped[CRMReminderType] = mapped_column(Enum(CRMReminderType))
+    status: Mapped[CRMReminderStatus] = mapped_column(
+        Enum(CRMReminderStatus),
+        default=CRMReminderStatus.PENDING,
+        server_default=CRMReminderStatus.PENDING.value,
+    )
+    scheduled_for: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    template_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rendered_subject: Mapped[str | None] = mapped_column(String(255))
+    rendered_body: Mapped[str] = mapped_column(Text())
+    related_order_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    related_event_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sent_manually_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    skipped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

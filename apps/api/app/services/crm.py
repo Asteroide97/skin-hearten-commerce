@@ -13,6 +13,12 @@ from app.models.enums import CRMLifecycleStatus, CRMTaskStatus
 from app.schemas.checkout import CheckoutRequest
 from app.schemas.crm import CRMContactUpdate, CRMNoteCreate, CRMTaskCreate, CRMTaskUpdate
 from app.schemas.skin_quiz import SkinQuizLeadCreate
+from app.services.crm_reminders import (
+    create_post_purchase_reminder_from_order,
+    create_repurchase_reminder_from_order,
+    create_skin_quiz_followup_reminder,
+    list_contact_reminders,
+)
 from app.services.mock_store import (
     CUSTOMERS,
     ORDERS,
@@ -236,6 +242,7 @@ def _serialize_contact_detail(
     *,
     events: list[dict[str, Any]],
     notes: list[dict[str, Any]],
+    reminders: list[dict[str, Any]],
     tasks: list[dict[str, Any]],
     purchase_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -264,6 +271,7 @@ def _serialize_contact_detail(
                 }
                 for note in notes
             ],
+            "reminders": reminders,
             "tasks": [
                 {
                     "id": task["id"],
@@ -378,9 +386,9 @@ def _safe_record_event(
     event_type: str,
     payload_json: dict[str, Any],
     source: str,
-) -> None:
+) -> dict[str, Any] | None:
     try:
-        record_crm_event(
+        return record_crm_event(
             db,
             contact_id=contact_id,
             event_type=event_type,
@@ -389,6 +397,7 @@ def _safe_record_event(
         )
     except Exception:
         db.rollback()
+        return None
 
 
 def upsert_contact_from_skin_quiz_lead(
@@ -436,7 +445,7 @@ def upsert_contact_from_skin_quiz_lead(
         db.commit()
         db.refresh(contact)
 
-        _safe_record_event(
+        quiz_event = _safe_record_event(
             db,
             contact_id=contact.id,
             event_type="skin_quiz_completed",
@@ -449,6 +458,14 @@ def upsert_contact_from_skin_quiz_lead(
             },
             source="skin_quiz",
         )
+        try:
+            create_skin_quiz_followup_reminder(
+                db,
+                contact,
+                related_event_id=quiz_event["id"] if quiz_event else None,
+            )
+        except Exception:
+            db.rollback()
         return _serialize_contact_summary(_contact_to_dict(contact))
     except SQLAlchemyError:
         db.rollback()
@@ -483,6 +500,10 @@ def upsert_contact_from_skin_quiz_lead(
             },
             source="skin_quiz",
         )
+        try:
+            create_skin_quiz_followup_reminder(db, contact)
+        except Exception:
+            db.rollback()
         return _serialize_contact_summary(contact)
 
 
@@ -555,6 +576,11 @@ def upsert_contact_from_checkout(
             payload_json=event_payload,
             source="checkout",
         )
+        try:
+            create_post_purchase_reminder_from_order(db, contact, order)
+            create_repurchase_reminder_from_order(db, contact, order)
+        except Exception:
+            db.rollback()
         return _serialize_contact_summary(_contact_to_dict(contact))
     except SQLAlchemyError:
         db.rollback()
@@ -598,6 +624,11 @@ def upsert_contact_from_checkout(
             payload_json=event_payload,
             source="checkout",
         )
+        try:
+            create_post_purchase_reminder_from_order(db, contact, order)
+            create_repurchase_reminder_from_order(db, contact, order)
+        except Exception:
+            db.rollback()
         return _serialize_contact_summary(contact)
 
 
@@ -704,6 +735,7 @@ def get_crm_contact_detail(db: Session, contact_id: int) -> dict[str, Any] | Non
             _contact_to_dict(contact),
             events=events,
             notes=notes,
+            reminders=list_contact_reminders(db, contact_id),
             tasks=tasks,
             purchase_summary=_serialize_purchase_summary_from_db(db, contact),
         )
@@ -716,6 +748,7 @@ def get_crm_contact_detail(db: Session, contact_id: int) -> dict[str, Any] | Non
             contact,
             events=list_mock_crm_events(contact_id, 12),
             notes=list_mock_crm_notes(contact_id),
+            reminders=list_contact_reminders(db, contact_id),
             tasks=list_mock_crm_tasks(contact_id),
         )
 
@@ -764,6 +797,7 @@ def update_crm_contact_profile(
                 .order_by(CRMNote.created_at.desc())
                 .all()
             ],
+            reminders=list_contact_reminders(db, contact_id),
             tasks=[
                 _task_to_dict(task)
                 for task in db.query(CRMTask)
@@ -782,6 +816,7 @@ def update_crm_contact_profile(
             contact,
             events=list_mock_crm_events(contact_id, 12),
             notes=list_mock_crm_notes(contact_id),
+            reminders=list_contact_reminders(db, contact_id),
             tasks=list_mock_crm_tasks(contact_id),
         )
 

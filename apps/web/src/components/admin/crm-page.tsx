@@ -9,18 +9,26 @@ import {
 } from "@/components/shared/icons";
 import {
   getCrmAgeRangeLabel,
+  buildCrmReminderMailtoHref,
+  buildCrmReminderWhatsAppHref,
   buildCrmContactName,
   buildCrmWhatsAppHref,
   CRM_LIFECYCLE_STATUS_OPTIONS,
+  CRM_REMINDER_CHANNEL_OPTIONS,
   CRM_TASK_TYPE_OPTIONS,
   getCrmEventLabel,
   getCrmLifecycleStatusLabel,
   getCrmMainGoalLabel,
+  getCrmReminderChannelLabel,
+  getCrmReminderStatusLabel,
+  getCrmReminderTypeLabel,
   getCrmSkinTypeLabel,
   getCrmSourceLabel,
   getCrmTaskStatusLabel,
   getCrmTaskTypeLabel,
   type CRMContactDetail,
+  type CRMReminderChannel,
+  type CRMReminderDetail,
   type CRMContactLifecycleStatus,
   type CRMContactSummary,
   type CRMContactUpdateInput,
@@ -45,6 +53,10 @@ type NoteApiResponse =
 
 type TaskApiResponse =
   | { ok: true; data: CRMTask }
+  | { ok: false; reason: string };
+
+type ReminderApiResponse =
+  | { ok: true; data: CRMReminderDetail }
   | { ok: false; reason: string };
 
 type Notice = {
@@ -141,6 +153,30 @@ function getTaskBadgeClasses(status: CRMTaskStatus) {
   }
 }
 
+function getReminderBadgeClasses(status: CRMReminderDetail["status"]) {
+  switch (status) {
+    case "ready":
+      return "border-[#d8e3cf] bg-[#f3faf0] text-[#476638]";
+    case "sent_manual":
+      return "border-[#cfe0df] bg-[#eef8f7] text-[#2c6160]";
+    case "skipped":
+    case "cancelled":
+      return "border-stone-200 bg-stone-100 text-stone-600";
+    case "pending":
+    default:
+      return "border-[#e7d3c1] bg-[#fff8f3] text-stone-800";
+  }
+}
+
+function toDatetimeLocalValue(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return offsetDate.toISOString().slice(0, 16);
+}
+
 function buildSummaryFromDetail(detail: CRMContactDetail): CRMContactSummary {
   return {
     acceptedMarketing: detail.acceptedMarketing,
@@ -191,6 +227,12 @@ export function CrmPage() {
   const [taskTypeDraft, setTaskTypeDraft] = useState<CRMTaskType>("manual");
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
   const [taskActionId, setTaskActionId] = useState<number | null>(null);
+
+  const [reminderChannelDraft, setReminderChannelDraft] = useState<CRMReminderChannel>("whatsapp");
+  const [reminderScheduledForDraft, setReminderScheduledForDraft] = useState("");
+  const [reminderSubjectDraft, setReminderSubjectDraft] = useState("");
+  const [reminderBodyDraft, setReminderBodyDraft] = useState("");
+  const [isSubmittingReminder, setIsSubmittingReminder] = useState(false);
 
   const activeContact = selectedContactId ? detailCache[selectedContactId] : null;
   const hasFilters =
@@ -480,6 +522,86 @@ export function CrmPage() {
     }
   }
 
+  async function handleCreateReminder() {
+    if (!activeContact) {
+      return;
+    }
+
+    if (reminderBodyDraft.trim().length < 2) {
+      setDrawerNotice({
+        kind: "error",
+        message: "Escribe un mensaje de recordatorio con al menos 2 caracteres.",
+      });
+      return;
+    }
+
+    const scheduledDate = reminderScheduledForDraft ? new Date(reminderScheduledForDraft) : null;
+    if (!scheduledDate || Number.isNaN(scheduledDate.getTime())) {
+      setDrawerNotice({
+        kind: "error",
+        message: "Selecciona una fecha valida para programar el recordatorio.",
+      });
+      return;
+    }
+
+    setIsSubmittingReminder(true);
+    setDrawerNotice(null);
+
+    try {
+      const response = await fetch(`/api/admin/crm/contacts/${activeContact.id}/reminders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          channel: reminderChannelDraft,
+          renderedBody: reminderBodyDraft.trim(),
+          renderedSubject: reminderChannelDraft === "email" ? reminderSubjectDraft.trim() || null : null,
+          scheduledFor: scheduledDate.toISOString(),
+        }),
+      });
+      const payload = (await response.json()) as ReminderApiResponse;
+
+      if (!response.ok || !payload.ok) {
+        setDrawerNotice({
+          kind: "error",
+          message: "No pudimos crear el recordatorio manual por ahora.",
+        });
+        return;
+      }
+
+      setDetailCache((current) => {
+        const currentContact = current[activeContact.id];
+        if (!currentContact) {
+          return current;
+        }
+
+        return {
+          ...current,
+          [activeContact.id]: {
+            ...currentContact,
+            reminders: [payload.data, ...currentContact.reminders],
+          },
+        };
+      });
+      setReminderChannelDraft("whatsapp");
+      setReminderScheduledForDraft("");
+      setReminderSubjectDraft("");
+      setReminderBodyDraft("");
+      setDrawerNotice({
+        kind: "success",
+        message: "Recordatorio manual creado correctamente.",
+      });
+    } catch {
+      setDrawerNotice({
+        kind: "error",
+        message: "No pudimos crear el recordatorio manual por ahora.",
+      });
+    } finally {
+      setIsSubmittingReminder(false);
+    }
+  }
+
   async function handleTaskStatusChange(taskId: number, status: CRMTaskStatus) {
     if (!activeContact) {
       return;
@@ -551,6 +673,12 @@ export function CrmPage() {
 
     setDraftLifecycleStatus(activeContact.lifecycleStatus);
     setDraftAcceptedMarketing(activeContact.acceptedMarketing);
+    const defaultReminderDate = new Date();
+    defaultReminderDate.setHours(defaultReminderDate.getHours() + 1);
+    setReminderScheduledForDraft(toDatetimeLocalValue(defaultReminderDate.toISOString()));
+    setReminderChannelDraft("whatsapp");
+    setReminderSubjectDraft("");
+    setReminderBodyDraft("");
   }, [activeContact]);
 
   return (
@@ -925,6 +1053,127 @@ export function CrmPage() {
                           type="button"
                         >
                           {isSavingProfile ? "Guardando..." : hasProfileChanges ? "Guardar cambios" : "Sin cambios pendientes"}
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
+                        Recordatorios
+                      </p>
+                      <h3 className="mt-2 font-serif text-2xl text-stone-900">Proximos seguimientos</h3>
+                    </div>
+
+                    <div className="mt-5 space-y-3">
+                      {activeContact.reminders.length === 0 ? (
+                        <EmptyBlock message="Todavia no hay recordatorios CRM para este contacto." />
+                      ) : (
+                        activeContact.reminders.map((reminder) => (
+                          <article className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4" key={reminder.id}>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-stone-900">
+                                  {getCrmReminderTypeLabel(reminder.reminderType)}
+                                </p>
+                                <p className="mt-1 text-xs leading-6 text-stone-500">
+                                  {getCrmReminderChannelLabel(reminder.channel)}
+                                  {` · ${formatDateTime(reminder.scheduledFor)}`}
+                                </p>
+                              </div>
+                              <span
+                                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getReminderBadgeClasses(reminder.status)}`}
+                              >
+                                {getCrmReminderStatusLabel(reminder.status)}
+                              </span>
+                            </div>
+
+                            <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">
+                              {reminder.renderedBody}
+                            </p>
+
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {reminder.channel === "whatsapp" && activeContact.whatsapp ? (
+                                <a
+                                  className="rounded-full border border-[#cfe0df] bg-[#eef8f7] px-4 py-2 text-xs font-semibold text-[#2c6160] transition hover:border-[#98b8b6]"
+                                  href={buildCrmReminderWhatsAppHref(activeContact.whatsapp, reminder.renderedBody)}
+                                  rel="noreferrer"
+                                  target="_blank"
+                                >
+                                  Abrir WhatsApp
+                                </a>
+                              ) : null}
+                              {reminder.channel === "email" && activeContact.email ? (
+                                <a
+                                  className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 transition hover:border-stone-500"
+                                  href={buildCrmReminderMailtoHref(
+                                    activeContact.email,
+                                    reminder.renderedSubject,
+                                    reminder.renderedBody,
+                                  )}
+                                >
+                                  Abrir email
+                                </a>
+                              ) : null}
+                            </div>
+                          </article>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="mt-5 grid gap-3">
+                      <div className="grid gap-3 lg:grid-cols-[220px_220px_1fr]">
+                        <select
+                          className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+                          onChange={(event) => {
+                            setReminderChannelDraft(event.target.value as CRMReminderChannel);
+                          }}
+                          value={reminderChannelDraft}
+                        >
+                          {CRM_REMINDER_CHANNEL_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+                          onChange={(event) => {
+                            setReminderScheduledForDraft(event.target.value);
+                          }}
+                          type="datetime-local"
+                          value={reminderScheduledForDraft}
+                        />
+                        <input
+                          className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+                          onChange={(event) => {
+                            setReminderSubjectDraft(event.target.value);
+                          }}
+                          placeholder="Subject opcional para email"
+                          value={reminderSubjectDraft}
+                        />
+                      </div>
+                      <textarea
+                        className="min-h-28 w-full rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm leading-7 text-stone-900 outline-none transition focus:border-stone-500"
+                        maxLength={4000}
+                        onChange={(event) => {
+                          setReminderBodyDraft(event.target.value);
+                        }}
+                        placeholder="Mensaje manual de seguimiento."
+                        value={reminderBodyDraft}
+                      />
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs text-stone-500">{reminderBodyDraft.length}/4000 caracteres</p>
+                        <button
+                          className="rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={isSubmittingReminder}
+                          onClick={() => {
+                            void handleCreateReminder();
+                          }}
+                          type="button"
+                        >
+                          {isSubmittingReminder ? "Creando..." : "Crear recordatorio manual"}
                         </button>
                       </div>
                     </div>

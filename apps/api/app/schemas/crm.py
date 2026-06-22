@@ -8,6 +8,16 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 CRMLifecycleStatus = Literal["lead", "customer", "repeat_customer", "inactive"]
 CRMTaskStatus = Literal["pending", "done", "cancelled"]
 CRMTaskType = Literal["follow_up", "abandoned_cart", "repurchase", "post_purchase", "manual"]
+CRMReminderStatus = Literal["pending", "ready", "sent_manual", "skipped", "cancelled"]
+CRMReminderChannel = Literal["whatsapp", "email"]
+CRMReminderType = Literal[
+    "skin_quiz_follow_up",
+    "abandoned_cart",
+    "post_purchase",
+    "repurchase_30_days",
+    "customer_inactive",
+    "manual",
+]
 CRMAutomationTriggerType = Literal[
     "skin_quiz_completed",
     "checkout_completed",
@@ -87,6 +97,7 @@ class CRMContactDetailRead(CRMContactSummaryRead):
     events: list[CRMEventRead]
     notes: list[CRMNoteRead]
     tasks: list[CRMTaskRead]
+    reminders: list["CRMReminderSummaryRead"]
     purchase_summary: CRMPurchaseSummaryRead = Field(serialization_alias="purchaseSummary")
 
 
@@ -121,6 +132,113 @@ class CRMTaskUpdate(BaseModel):
     status: CRMTaskStatus
 
     model_config = ConfigDict(extra="forbid")
+
+
+class CRMReminderContactRead(BaseModel):
+    id: int
+    first_name: str = Field(serialization_alias="firstName")
+    last_name: str | None = Field(default=None, serialization_alias="lastName")
+    email: EmailStr | None = None
+    whatsapp: str | None = None
+    main_goal: str | None = Field(default=None, serialization_alias="mainGoal")
+    skin_type: str | None = Field(default=None, serialization_alias="skinType")
+    accepted_marketing: bool = Field(serialization_alias="acceptedMarketing")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CRMReminderSummaryRead(BaseModel):
+    id: int
+    channel: CRMReminderChannel
+    reminder_type: CRMReminderType = Field(serialization_alias="reminderType")
+    status: CRMReminderStatus
+    scheduled_for: datetime = Field(serialization_alias="scheduledFor")
+    rendered_subject: str | None = Field(default=None, serialization_alias="renderedSubject")
+    rendered_body: str = Field(serialization_alias="renderedBody")
+    template_id: int | None = Field(default=None, serialization_alias="templateId")
+    template_name: str | None = Field(default=None, serialization_alias="templateName")
+    related_order_id: int | None = Field(default=None, serialization_alias="relatedOrderId")
+    related_event_id: int | None = Field(default=None, serialization_alias="relatedEventId")
+    sent_manually_at: datetime | None = Field(default=None, serialization_alias="sentManuallyAt")
+    skipped_at: datetime | None = Field(default=None, serialization_alias="skippedAt")
+    created_at: datetime = Field(serialization_alias="createdAt")
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+    contact: CRMReminderContactRead
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CRMReminderDetailRead(CRMReminderSummaryRead):
+    reminder_reason: str = Field(serialization_alias="reminderReason")
+
+
+class CRMReminderUpdate(BaseModel):
+    status: CRMReminderStatus | None = None
+    scheduled_for: datetime | None = Field(default=None, alias="scheduledFor")
+    rendered_subject: str | None = Field(default=None, alias="renderedSubject", max_length=255)
+    rendered_body: str | None = Field(default=None, alias="renderedBody", min_length=2, max_length=4000)
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_non_empty_payload(self) -> "CRMReminderUpdate":
+        if not self.model_fields_set:
+            raise ValueError("At least one reminder field must be provided")
+        return self
+
+
+class CRMReminderCreate(BaseModel):
+    channel: CRMReminderChannel
+    scheduled_for: datetime = Field(alias="scheduledFor")
+    rendered_subject: str | None = Field(default=None, alias="renderedSubject", max_length=255)
+    rendered_body: str = Field(alias="renderedBody", min_length=2, max_length=4000)
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+
+class CRMMessageTemplateRead(BaseModel):
+    id: int
+    name: str
+    channel: CRMReminderChannel
+    reminder_type: CRMReminderType = Field(serialization_alias="reminderType")
+    subject: str | None = None
+    body: str
+    is_active: bool = Field(serialization_alias="isActive")
+    created_at: datetime = Field(serialization_alias="createdAt")
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CRMMessageTemplateUpdate(BaseModel):
+    subject: str | None = Field(default=None, max_length=255)
+    body: str | None = Field(default=None, min_length=2, max_length=4000)
+    is_active: bool | None = Field(default=None, alias="isActive")
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_non_empty_payload(self) -> "CRMMessageTemplateUpdate":
+        if not self.model_fields_set:
+            raise ValueError("At least one template field must be provided")
+        return self
+
+
+class CRMMessageTemplatePreviewRequest(BaseModel):
+    contact_id: int | None = Field(default=None, alias="contactId")
+    subject: str | None = Field(default=None, max_length=255)
+    body: str | None = Field(default=None, min_length=2, max_length=4000)
+    context: dict[str, Any] | None = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+
+class CRMMessageTemplatePreviewResponse(BaseModel):
+    rendered_subject: str | None = Field(default=None, serialization_alias="renderedSubject")
+    rendered_body: str = Field(serialization_alias="renderedBody")
+    variables: list[str]
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class CRMAutomationRuleRead(BaseModel):
@@ -167,3 +285,6 @@ class CRMAutomationRunRead(BaseModel):
     created_at: datetime = Field(serialization_alias="createdAt")
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+CRMContactDetailRead.model_rebuild()
