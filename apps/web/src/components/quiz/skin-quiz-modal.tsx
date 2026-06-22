@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ArrowUpRightIcon } from "@/components/shared/icons";
+import { SkinQuizLeadStep } from "@/components/quiz/skin-quiz-lead-step";
 import { SkinQuizResult } from "@/components/quiz/skin-quiz-result";
 import { trackEvent } from "@/lib/analytics";
 import {
@@ -11,14 +12,20 @@ import {
   clearSkinQuizDismissal,
   dismissSkinQuizForDays,
   getSkinQuizDismissedWindow,
+  getSkinQuizWhatsAppHref,
   readStoredSkinQuizResult,
+  readStoredSkinQuizLead,
+  saveSkinQuizLead,
   saveSkinQuizResult,
   shouldAutoOpenSkinQuiz,
   skinQuizQuestions,
   type SkinQuizAnswers,
+  type SkinQuizLead,
+  type SkinQuizLeadInput,
   type SkinQuizQuestionId,
   type SkinQuizResult as SkinQuizResultValue,
 } from "@/lib/skin-quiz";
+import type { SkinQuizLeadValues } from "@/schemas/skin-quiz-lead";
 import { products } from "@/lib/site-data";
 import { cn } from "@/lib/utils";
 import { useSkinQuizStore } from "@/store/skin-quiz-store";
@@ -38,16 +45,19 @@ export function SkinQuizModal() {
   const source = useSkinQuizStore((state) => state.source);
 
   const [answers, setAnswers] = useState<Partial<SkinQuizAnswers>>({});
+  const [pendingResult, setPendingResult] = useState<SkinQuizResultValue | null>(null);
   const [result, setResult] = useState<SkinQuizResultValue | null>(null);
+  const [storedLead, setStoredLead] = useState<SkinQuizLead | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [routineAdded, setRoutineAdded] = useState(false);
   const autoPromptedRef = useRef(false);
   const timeoutRef = useRef<number | null>(null);
 
   const currentQuestion = skinQuizQuestions[stepIndex];
+  const isLeadStepActive = pendingResult !== null && result === null;
   const progress = useMemo(
-    () => Math.round(((Math.min(stepIndex + 1, skinQuizQuestions.length)) / skinQuizQuestions.length) * 100),
-    [stepIndex],
+    () => (result || isLeadStepActive ? 100 : Math.round(((Math.min(stepIndex + 1, skinQuizQuestions.length)) / skinQuizQuestions.length) * 100)),
+    [isLeadStepActive, result, stepIndex],
   );
 
   const handleDismiss = useCallback((reason: DismissReason) => {
@@ -83,8 +93,11 @@ export function SkinQuizModal() {
     }
 
     const storedResult = readStoredSkinQuizResult();
+    const savedLead = readStoredSkinQuizLead();
     setAnswers(storedResult?.answers ?? {});
+    setPendingResult(null);
     setResult(storedResult);
+    setStoredLead(savedLead);
     setStepIndex(0);
     setRoutineAdded(false);
 
@@ -139,10 +152,24 @@ export function SkinQuizModal() {
   function handleRestartQuiz() {
     clearSkinQuizDismissal();
     setAnswers({});
+    setPendingResult(null);
     setResult(null);
     setStepIndex(0);
     setRoutineAdded(false);
+    setStoredLead(readStoredSkinQuizLead());
     trackEvent("skin_quiz_started", { source });
+  }
+
+  function showResult(nextResult: SkinQuizResultValue) {
+    saveSkinQuizResult(nextResult);
+    setPendingResult(null);
+    setResult(nextResult);
+    setRoutineAdded(false);
+    trackEvent("skin_quiz_completed", {
+      goal: nextResult.answers.goal,
+      recommended_product_ids: nextResult.recommendedProductIds,
+      skin_type: nextResult.answers.skinType,
+    });
   }
 
   function handleAnswer(questionId: SkinQuizQuestionId, value: SkinQuizAnswers[SkinQuizQuestionId]) {
@@ -162,18 +189,60 @@ export function SkinQuizModal() {
     if (stepIndex === skinQuizQuestions.length - 1) {
       const completedAnswers = nextAnswers as SkinQuizAnswers;
       const nextResult = calculateSkinQuizResult(completedAnswers, products);
-      saveSkinQuizResult(nextResult);
-      setResult(nextResult);
+      const savedLead = readStoredSkinQuizLead();
+      setPendingResult(nextResult);
+      setStoredLead(savedLead);
       setRoutineAdded(false);
-      trackEvent("skin_quiz_completed", {
+      trackEvent("skin_quiz_lead_step_viewed", {
         goal: completedAnswers.goal,
-        recommended_product_ids: nextResult.recommendedProductIds,
-        skin_type: completedAnswers.skinType,
+        has_saved_lead: Boolean(savedLead),
+        source,
       });
       return;
     }
 
     setStepIndex((currentStep) => currentStep + 1);
+  }
+
+  function handleLeadCaptured(values: SkinQuizLeadValues) {
+    if (!pendingResult) {
+      return;
+    }
+
+    const leadInput: SkinQuizLeadInput = {
+      acceptedMarketing: values.acceptedMarketing,
+      email: values.email,
+      name: values.name,
+      whatsapp: values.whatsapp,
+    };
+
+    const lead: SkinQuizLead = {
+      ...leadInput,
+      createdAt: new Date().toISOString(),
+      quizResult: pendingResult,
+    };
+
+    saveSkinQuizLead(lead);
+    setStoredLead(lead);
+    trackEvent("skin_quiz_lead_captured", {
+      accepted_marketing: lead.acceptedMarketing,
+      goal: pendingResult.answers.goal,
+      has_email: lead.email.trim().length > 0,
+      source,
+    });
+    showResult(pendingResult);
+  }
+
+  function handleLeadSkipped() {
+    if (!pendingResult) {
+      return;
+    }
+
+    trackEvent("skin_quiz_lead_skipped", {
+      goal: pendingResult.answers.goal,
+      source,
+    });
+    showResult(pendingResult);
   }
 
   function handleAddRoutineToCart() {
@@ -250,18 +319,20 @@ export function SkinQuizModal() {
 
             <div className="mt-8 space-y-4 rounded-[1.6rem] border border-white/80 bg-white/70 p-5 shadow-soft">
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-stone-500">
-                {result ? "Rutina lista" : `Paso ${stepIndex + 1} de ${skinQuizQuestions.length}`}
+                {result ? "Rutina lista" : isLeadStepActive ? "Ultimo paso" : `Paso ${stepIndex + 1} de ${skinQuizQuestions.length}`}
               </p>
               <div className="h-2 overflow-hidden rounded-full bg-stone-200">
                 <div
                   className="h-full rounded-full bg-stone-950 transition-all duration-300"
-                  style={{ width: `${result ? 100 : progress}%` }}
+                  style={{ width: `${progress}%` }}
                 />
               </div>
               <p className="text-sm leading-7 text-stone-600">
                 {result
                   ? "Tu recomendacion usa productos reales del catalogo actual y se adapta a tiempo, sensibilidad y objetivo principal."
-                  : "Una pregunta por pantalla, sin saturacion. Buscamos una rutina facil de seguir y alineada con tu objetivo."}
+                  : isLeadStepActive
+                    ? "Comparte a donde enviarte la rutina o continua sin dejar tus datos. El flujo sigue siendo 100% frontend."
+                    : "Una pregunta por pantalla, sin saturacion. Buscamos una rutina facil de seguir y alineada con tu objetivo."}
               </p>
             </div>
 
@@ -278,7 +349,7 @@ export function SkinQuizModal() {
               ))}
             </div>
 
-            {!result ? (
+            {!result && !isLeadStepActive ? (
               <div className="mt-auto pt-6">
                 <button
                   className="inline-flex items-center gap-2 rounded-full border border-[#d9c4b2] bg-white px-4 py-3 text-sm font-medium text-stone-700 transition hover:border-stone-500 hover:text-stone-950"
@@ -303,6 +374,13 @@ export function SkinQuizModal() {
               onClose={close}
               onRestart={handleRestartQuiz}
               result={result}
+              whatsappHref={getSkinQuizWhatsAppHref()}
+            />
+          ) : isLeadStepActive && pendingResult ? (
+            <SkinQuizLeadStep
+              defaultValues={storedLead ?? undefined}
+              onSkip={handleLeadSkipped}
+              onSubmit={handleLeadCaptured}
             />
           ) : currentQuestion ? (
             <div className="space-y-6">

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { ArrowUpRightIcon, CheckCircleIcon } from "@/components/shared/icons";
+import { ArrowUpRightIcon, CheckCircleIcon, WhatsAppIcon } from "@/components/shared/icons";
 import { formatCurrency } from "@/lib/format";
 import type { SkinQuizResult as SkinQuizResultValue } from "@/lib/skin-quiz";
 
@@ -12,6 +12,7 @@ type SkinQuizResultProps = {
   onClose: () => void;
   onRestart: () => void;
   result: SkinQuizResultValue;
+  whatsappHref: string;
 };
 
 export function SkinQuizResult({
@@ -20,6 +21,7 @@ export function SkinQuizResult({
   onClose,
   onRestart,
   result,
+  whatsappHref,
 }: SkinQuizResultProps) {
   return (
     <div className="space-y-6">
@@ -104,7 +106,7 @@ export function SkinQuizResult({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-stone-200 pt-5 sm:flex-row">
+      <div className="flex flex-col gap-3 border-t border-stone-200 pt-5 sm:flex-row sm:flex-wrap">
         <Link
           className="inline-flex items-center justify-center gap-2 rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800"
           href={result.collectionHref}
@@ -113,8 +115,18 @@ export function SkinQuizResult({
           Ver rutina completa
           <ArrowUpRightIcon />
         </Link>
+        <a
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-[#d9c4b2] bg-[#fff8f3] px-5 py-3 text-sm font-semibold text-stone-900 transition hover:border-stone-400"
+          href={whatsappHref}
+          onClick={onClose}
+          rel="noreferrer"
+          target="_blank"
+        >
+          <WhatsAppIcon className="text-[#1a6f4e]" />
+          Enviar mi rutina por WhatsApp
+        </a>
         <button
-          className="inline-flex items-center justify-center rounded-full border border-[#d9c4b2] bg-[#fff8f3] px-5 py-3 text-sm font-semibold text-stone-900 transition hover:border-stone-400"
+          className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-900 transition hover:border-stone-500"
           onClick={onAddRoutineToCart}
           type="button"
         >

@@ -70,6 +70,39 @@ export type AnalyticsEventMap = {
     item_count: number;
     cart_total: number;
   };
+  skin_quiz_lead_step_viewed: {
+    source: SkinQuizAnalyticsSource;
+    goal:
+      | "manchas"
+      | "acne"
+      | "lineas_expresion"
+      | "hidratacion"
+      | "luminosidad"
+      | "proteccion_solar";
+    has_saved_lead: boolean;
+  };
+  skin_quiz_lead_captured: {
+    source: SkinQuizAnalyticsSource;
+    goal:
+      | "manchas"
+      | "acne"
+      | "lineas_expresion"
+      | "hidratacion"
+      | "luminosidad"
+      | "proteccion_solar";
+    has_email: boolean;
+    accepted_marketing: boolean;
+  };
+  skin_quiz_lead_skipped: {
+    source: SkinQuizAnalyticsSource;
+    goal:
+      | "manchas"
+      | "acne"
+      | "lineas_expresion"
+      | "hidratacion"
+      | "luminosidad"
+      | "proteccion_solar";
+  };
 };
 
 export type AnalyticsEventName = keyof AnalyticsEventMap;

@@ -2,7 +2,11 @@ import type { Product } from "@/lib/types";
 
 export const SKIN_QUIZ_COMPLETED_KEY = "skin_quiz_completed";
 export const SKIN_QUIZ_DISMISSED_UNTIL_KEY = "skin_quiz_dismissed_until";
+export const SKIN_QUIZ_LEAD_KEY = "skin_quiz_lead";
 export const SKIN_QUIZ_RESULT_KEY = "skin_quiz_result";
+export const SKIN_QUIZ_WHATSAPP_MESSAGE =
+  "Hola, hice el Skin Quiz y quiero recibir ayuda con mi rutina recomendada.";
+export const SKIN_QUIZ_WHATSAPP_NUMBER = "525500000000";
 
 const SEVEN_DAYS_IN_MS = 7 * 24 * 60 * 60 * 1000;
 const storageFallback = new Map<string, string>();
@@ -64,6 +68,18 @@ export type SkinQuizResult = {
   collectionHref: string;
   recommendedProductIds: string[];
   generatedAt: string;
+};
+
+export type SkinQuizLeadInput = {
+  name: string;
+  whatsapp: string;
+  email: string;
+  acceptedMarketing: boolean;
+};
+
+export type SkinQuizLead = SkinQuizLeadInput & {
+  createdAt: string;
+  quizResult: SkinQuizResult;
 };
 
 type BrowserStorage = {
@@ -280,6 +296,25 @@ export function readStoredSkinQuizResult() {
   }
 }
 
+export function readStoredSkinQuizLead() {
+  const storage = getStorage();
+  if (!storage) {
+    return null;
+  }
+
+  const rawLead = storage.getItem(SKIN_QUIZ_LEAD_KEY);
+  if (!rawLead) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawLead) as SkinQuizLead;
+  } catch {
+    storage.removeItem(SKIN_QUIZ_LEAD_KEY);
+    return null;
+  }
+}
+
 export function isSkinQuizCompleted() {
   const storage = getStorage();
   if (!storage) {
@@ -335,6 +370,15 @@ export function saveSkinQuizResult(result: SkinQuizResult) {
   storage.setItem(SKIN_QUIZ_COMPLETED_KEY, "true");
   storage.setItem(SKIN_QUIZ_RESULT_KEY, JSON.stringify(result));
   storage.removeItem(SKIN_QUIZ_DISMISSED_UNTIL_KEY);
+}
+
+export function saveSkinQuizLead(lead: SkinQuizLead) {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  storage.setItem(SKIN_QUIZ_LEAD_KEY, JSON.stringify(lead));
 }
 
 export function clearSkinQuizDismissal() {
@@ -500,4 +544,8 @@ export function calculateSkinQuizResult(answers: SkinQuizAnswers, products: Prod
 
 export function getSkinQuizDismissedWindow() {
   return SEVEN_DAYS_IN_MS;
+}
+
+export function getSkinQuizWhatsAppHref() {
+  return `https://wa.me/${SKIN_QUIZ_WHATSAPP_NUMBER}?text=${encodeURIComponent(SKIN_QUIZ_WHATSAPP_MESSAGE)}`;
 }
