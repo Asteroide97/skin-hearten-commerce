@@ -95,6 +95,7 @@ class CRMReminderType(StrEnum):
     SKIN_QUIZ_FOLLOW_UP = "skin_quiz_follow_up"
     ABANDONED_CART = "abandoned_cart"
     POST_PURCHASE = "post_purchase"
+    POST_SHIPPING_FOLLOW_UP = "post_shipping_follow_up"
     REPURCHASE_30_DAYS = "repurchase_30_days"
     CUSTOMER_INACTIVE = "customer_inactive"
     MANUAL = "manual"

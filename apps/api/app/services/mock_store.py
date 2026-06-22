@@ -374,6 +374,27 @@ ORDERS = [
         "shipping_total": 149.0,
         "grand_total": 1129.0,
         "payment_provider": "mercadopago",
+        "customer_email": "cliente@skinhearten.com",
+        "shipping_name": "Cliente Demo",
+        "shipping_phone": "+52 55 1234 5678",
+        "shipping_address": "Av. Reforma 123, Col. Juarez, Ciudad de Mexico, CDMX, 06600, Mexico",
+        "shipping_address_data": {
+            "line1": "Av. Reforma 123",
+            "line2": "Col. Juarez",
+            "city": "Ciudad de Mexico",
+            "state": "CDMX",
+            "postal_code": "06600",
+            "country": "Mexico",
+        },
+        "tracking_number": None,
+        "shipping_carrier": None,
+        "internal_notes": None,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "shipped_at": None,
+        "delivered_at": None,
+        "cancelled_at": None,
+        "refunded_at": None,
         "items": [
             {"product_id": 2, "product_name": "Gel Limpiador Barrera", "quantity": 1, "unit_price": 649.0}
         ],
@@ -388,8 +409,18 @@ PAYMENTS = [
         "provider_reference": "mer_demo_001",
         "status": "paid",
         "amount": 1129.0,
-        "raw_payload_json": {},
+        "raw_payload_json": {
+            "shipping_address": {
+                "line1": "Av. Reforma 123",
+                "line2": "Col. Juarez",
+                "city": "Ciudad de Mexico",
+                "state": "CDMX",
+                "postal_code": "06600",
+                "country": "Mexico",
+            }
+        },
         "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
         "paid_at": datetime.now(timezone.utc),
         "failed_at": None,
     }

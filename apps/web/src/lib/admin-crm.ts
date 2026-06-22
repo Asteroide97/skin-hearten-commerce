@@ -7,6 +7,7 @@ export type CRMReminderType =
   | "skin_quiz_follow_up"
   | "abandoned_cart"
   | "post_purchase"
+  | "post_shipping_follow_up"
   | "repurchase_30_days"
   | "customer_inactive"
   | "manual";
@@ -278,6 +279,7 @@ export const CRM_REMINDER_TYPE_OPTIONS: Array<{
 }> = [
   { value: "skin_quiz_follow_up", label: "Skin Quiz" },
   { value: "post_purchase", label: "Post compra" },
+  { value: "post_shipping_follow_up", label: "Post envio" },
   { value: "repurchase_30_days", label: "Recompra 30 dias" },
   { value: "customer_inactive", label: "Cliente inactivo" },
   { value: "abandoned_cart", label: "Checkout abandonado" },
@@ -428,6 +430,10 @@ export function getCrmEventLabel(eventType: string) {
       return "Checkout completado";
     case "order_created":
       return "Orden creada";
+    case "order_paid":
+      return "Orden pagada";
+    case "order_status_updated":
+      return "Estado de orden actualizado";
     default:
       return eventType.replaceAll("_", " ");
   }

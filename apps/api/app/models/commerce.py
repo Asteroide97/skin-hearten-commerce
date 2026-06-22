@@ -49,6 +49,13 @@ class Order(TimestampMixin, Base):
     grand_total: Mapped[float] = mapped_column(Numeric(10, 2))
     shipping_name: Mapped[str] = mapped_column(String(255))
     shipping_address: Mapped[str] = mapped_column(Text())
+    tracking_number: Mapped[str | None] = mapped_column(String(120))
+    shipping_carrier: Mapped[str | None] = mapped_column(String(120))
+    internal_notes: Mapped[str | None] = mapped_column(Text())
+    shipped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    refunded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class OrderItem(TimestampMixin, Base):

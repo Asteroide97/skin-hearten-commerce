@@ -66,6 +66,14 @@ DEFAULT_MESSAGE_TEMPLATES: list[dict[str, Any]] = [
         "is_active": True,
     },
     {
+        "name": "WhatsApp - Post-envio",
+        "channel": "whatsapp",
+        "reminder_type": "post_shipping_follow_up",
+        "subject": None,
+        "body": "Hola {{first_name}}, vi que tu pedido {{order_number}} ya va en camino. Si quieres, puedo ayudarte a aprovechar mejor tu rutina Skin Hearten.",
+        "is_active": True,
+    },
+    {
         "name": "WhatsApp - Cliente inactivo",
         "channel": "whatsapp",
         "reminder_type": "customer_inactive",
@@ -87,6 +95,14 @@ DEFAULT_MESSAGE_TEMPLATES: list[dict[str, Any]] = [
         "reminder_type": "post_purchase",
         "subject": "¿Cómo te fue con tu compra?",
         "body": "Hola {{first_name}}, queremos saber si todo llegó bien...",
+        "is_active": True,
+    },
+    {
+        "name": "Email - Post-envio",
+        "channel": "email",
+        "reminder_type": "post_shipping_follow_up",
+        "subject": "Tu pedido Skin Hearten ya va en camino",
+        "body": "Hola {{first_name}}, tu pedido {{order_number}} ya va en camino. Si quieres ayuda para aplicar tu rutina, estamos listas para apoyarte.",
         "is_active": True,
     },
 ]
@@ -220,6 +236,7 @@ def _reminder_reason(reminder_type: str) -> str:
         "skin_quiz_follow_up": "Seguimiento al Skin Quiz",
         "abandoned_cart": "Checkout abandonado",
         "post_purchase": "Seguimiento post-compra",
+        "post_shipping_follow_up": "Seguimiento post-envio",
         "repurchase_30_days": "Posible recompra a 30 días",
         "customer_inactive": "Cliente inactivo",
         "manual": "Recordatorio manual",
@@ -621,6 +638,59 @@ def create_repurchase_reminder_from_order(
             channel="email",
             scheduled_for=order_created_at + timedelta(days=days),
             related_order_id=order.get("id"),
+            context=context,
+        )
+        if email_reminder:
+            reminders.append(email_reminder)
+
+    return reminders
+
+
+def create_post_shipping_followup_reminder(
+    db: Session,
+    contact: CRMContact | dict[str, Any],
+    order: dict[str, Any],
+    *,
+    hours: int = 72,
+    related_event_id: int | None = None,
+) -> list[dict[str, Any]]:
+    contact_data = _contact_to_dict(contact)
+    if not contact_data.get("accepted_marketing"):
+        return []
+
+    scheduled_base = _normalize_datetime(
+        order.get("shipped_at") or order.get("updated_at") or order.get("created_at")
+    )
+    context = {
+        "order_number": order.get("order_number") or "",
+        "last_order_date": scheduled_base.date().isoformat(),
+        "store_name": "Skin Hearten",
+    }
+    reminders: list[dict[str, Any]] = []
+
+    if contact_data.get("whatsapp"):
+        whatsapp_reminder = create_reminder(
+            db,
+            contact=contact_data,
+            reminder_type="post_shipping_follow_up",
+            channel="whatsapp",
+            scheduled_for=scheduled_base + timedelta(hours=hours),
+            related_order_id=order.get("id"),
+            related_event_id=related_event_id,
+            context=context,
+        )
+        if whatsapp_reminder:
+            reminders.append(whatsapp_reminder)
+
+    if not reminders and contact_data.get("email"):
+        email_reminder = create_reminder(
+            db,
+            contact=contact_data,
+            reminder_type="post_shipping_follow_up",
+            channel="email",
+            scheduled_for=scheduled_base + timedelta(hours=hours),
+            related_order_id=order.get("id"),
+            related_event_id=related_event_id,
             context=context,
         )
         if email_reminder:

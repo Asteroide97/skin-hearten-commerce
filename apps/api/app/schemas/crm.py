@@ -14,6 +14,7 @@ CRMReminderType = Literal[
     "skin_quiz_follow_up",
     "abandoned_cart",
     "post_purchase",
+    "post_shipping_follow_up",
     "repurchase_30_days",
     "customer_inactive",
     "manual",
