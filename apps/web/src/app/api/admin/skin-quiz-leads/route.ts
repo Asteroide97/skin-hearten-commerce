@@ -8,6 +8,13 @@ export async function GET(request: Request) {
     date_from: searchParams.get("date_from") ?? searchParams.get("dateFrom") ?? undefined,
     date_to: searchParams.get("date_to") ?? searchParams.get("dateTo") ?? undefined,
     search: searchParams.get("search") ?? undefined,
+    status: (searchParams.get("status") as
+      | "new"
+      | "contacted"
+      | "interested"
+      | "purchased"
+      | "not_interested"
+      | null) ?? undefined,
     source: searchParams.get("source") ?? undefined,
   });
 

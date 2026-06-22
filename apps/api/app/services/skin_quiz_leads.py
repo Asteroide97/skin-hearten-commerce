@@ -10,11 +10,12 @@ from sqlalchemy.orm import Session
 
 from app.db.session import engine
 from app.models import Base, SkinQuizLead
-from app.schemas.skin_quiz import SkinQuizLeadCreate
+from app.schemas.skin_quiz import SkinQuizLeadCreate, SkinQuizLeadUpdate
 from app.services.mock_store import (
     create_skin_quiz_lead as create_mock_skin_quiz_lead,
     get_skin_quiz_lead as get_mock_skin_quiz_lead,
     list_skin_quiz_leads as list_mock_skin_quiz_leads,
+    update_skin_quiz_lead as update_mock_skin_quiz_lead,
 )
 
 _skin_quiz_table_initialized = False
@@ -82,6 +83,9 @@ def _lead_to_dict(lead: SkinQuizLead) -> dict[str, Any]:
         "whatsapp": lead.whatsapp,
         "email": lead.email,
         "accepted_marketing": lead.accepted_marketing,
+        "status": lead.status,
+        "internal_notes": lead.internal_notes,
+        "last_contacted_at": lead.last_contacted_at,
         "answers_json": lead.answers_json or {},
         "result_json": lead.result_json or {},
         "source": lead.source,
@@ -100,6 +104,9 @@ def _serialize_summary(lead: Mapping[str, Any]) -> dict[str, Any]:
         "whatsapp": lead["whatsapp"],
         "email": lead.get("email"),
         "accepted_marketing": bool(lead.get("accepted_marketing")),
+        "status": lead.get("status") or "new",
+        "internal_notes": lead.get("internal_notes"),
+        "last_contacted_at": lead.get("last_contacted_at"),
         "source": lead.get("source") or "unknown",
         "created_at": lead["created_at"],
         "result_summary": _summarize_result(result.get("summary")),
@@ -132,6 +139,7 @@ def create_skin_quiz_lead(
             whatsapp=payload.whatsapp,
             email=payload.email,
             accepted_marketing=payload.accepted_marketing,
+            status="new",
             answers_json=payload.answers,
             result_json=payload.quiz_result,
             source=payload.source,
@@ -152,6 +160,7 @@ def create_skin_quiz_lead(
                 "whatsapp": payload.whatsapp,
                 "email": payload.email,
                 "accepted_marketing": payload.accepted_marketing,
+                "status": "new",
                 "answers_json": payload.answers,
                 "result_json": payload.quiz_result,
                 "source": payload.source,
@@ -166,6 +175,7 @@ def list_skin_quiz_lead_summaries(
     date_from: date | None = None,
     date_to: date | None = None,
     search: str | None = None,
+    status: str | None = None,
     source: str | None = None,
 ) -> list[dict[str, Any]]:
     start, end = _build_date_range(date_from, date_to)
@@ -176,6 +186,8 @@ def list_skin_quiz_lead_summaries(
 
         if source:
             query = query.filter(SkinQuizLead.source == source)
+        if status:
+            query = query.filter(SkinQuizLead.status == status)
         if start:
             query = query.filter(SkinQuizLead.created_at >= start)
         if end:
@@ -200,6 +212,7 @@ def list_skin_quiz_lead_summaries(
                 date_from=start,
                 date_to=end,
                 search=search,
+                status=status,
                 source=source,
             )
         ]
@@ -215,6 +228,40 @@ def get_skin_quiz_lead_detail(db: Session, lead_id: int) -> dict[str, Any] | Non
     except SQLAlchemyError:
         db.rollback()
         lead = get_mock_skin_quiz_lead(lead_id)
+        if not lead:
+            return None
+        return _serialize_detail(lead)
+
+
+def update_skin_quiz_lead(
+    db: Session,
+    lead_id: int,
+    payload: SkinQuizLeadUpdate,
+) -> dict[str, Any] | None:
+    changes: dict[str, Any] = {}
+    if "status" in payload.model_fields_set:
+        changes["status"] = payload.status
+    if "internal_notes" in payload.model_fields_set:
+        changes["internal_notes"] = payload.internal_notes
+    if "last_contacted_at" in payload.model_fields_set:
+        changes["last_contacted_at"] = payload.last_contacted_at
+
+    try:
+        _ensure_skin_quiz_table()
+        lead = db.query(SkinQuizLead).filter(SkinQuizLead.id == lead_id).first()
+        if not lead:
+            return None
+
+        for field_name, field_value in changes.items():
+            setattr(lead, field_name, field_value)
+
+        db.add(lead)
+        db.commit()
+        db.refresh(lead)
+        return _serialize_detail(_lead_to_dict(lead))
+    except SQLAlchemyError:
+        db.rollback()
+        lead = update_mock_skin_quiz_lead(lead_id, changes)
         if not lead:
             return None
         return _serialize_detail(lead)

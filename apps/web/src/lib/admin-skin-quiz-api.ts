@@ -4,6 +4,7 @@ import type {
   AdminSkinQuizLead,
   AdminSkinQuizLeadDetail,
   AdminSkinQuizLeadFilters,
+  AdminSkinQuizLeadUpdateInput,
 } from "@/lib/admin-skin-quiz-leads";
 
 type AdminApiFailureReason =
@@ -66,7 +67,11 @@ async function getAdminAccessToken(): Promise<string | null> {
 
 async function requestAdminJson<TData>(
   path: string,
-  filters?: AdminSkinQuizLeadFilters,
+  options?: {
+    body?: AdminSkinQuizLeadUpdateInput;
+    filters?: AdminSkinQuizLeadFilters;
+    method?: "GET" | "PATCH";
+  },
 ): Promise<AdminApiResult<TData>> {
   const apiBaseUrl = getApiBaseUrl();
   if (!apiBaseUrl) {
@@ -80,8 +85,8 @@ async function requestAdminJson<TData>(
     }
 
     const url = new URL(`${apiBaseUrl}${path}`);
-    if (filters) {
-      for (const [key, value] of Object.entries(filters)) {
+    if (options?.filters) {
+      for (const [key, value] of Object.entries(options.filters)) {
         if (typeof value === "string" && value.trim().length > 0) {
           url.searchParams.set(key, value.trim());
         }
@@ -89,9 +94,12 @@ async function requestAdminJson<TData>(
     }
 
     const response = await fetch(url.toString(), {
+      method: options?.method ?? "GET",
       headers: {
         Authorization: `Bearer ${token}`,
+        ...(options?.body ? { "Content-Type": "application/json" } : {}),
       },
+      body: options?.body ? JSON.stringify(options.body) : undefined,
       cache: "no-store",
     });
 
@@ -111,9 +119,16 @@ async function requestAdminJson<TData>(
 }
 
 export async function listAdminSkinQuizLeads(filters?: AdminSkinQuizLeadFilters) {
-  return requestAdminJson<AdminSkinQuizLead[]>("/admin/skin-quiz/leads", filters);
+  return requestAdminJson<AdminSkinQuizLead[]>("/admin/skin-quiz/leads", { filters });
 }
 
 export async function getAdminSkinQuizLeadDetail(leadId: number) {
   return requestAdminJson<AdminSkinQuizLeadDetail>(`/admin/skin-quiz/leads/${leadId}`);
+}
+
+export async function updateAdminSkinQuizLead(leadId: number, payload: AdminSkinQuizLeadUpdateInput) {
+  return requestAdminJson<AdminSkinQuizLeadDetail>(`/admin/skin-quiz/leads/${leadId}`, {
+    body: payload,
+    method: "PATCH",
+  });
 }

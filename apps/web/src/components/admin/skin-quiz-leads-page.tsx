@@ -4,10 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ArrowUpRightIcon, WhatsAppIcon } from "@/components/shared/icons";
 import {
+  SKIN_QUIZ_LEAD_STATUS_OPTIONS,
   buildAdminLeadWhatsAppHref,
   getSkinQuizLeadSourceLabel,
+  getSkinQuizLeadStatusLabel,
   type AdminSkinQuizLead,
   type AdminSkinQuizLeadDetail,
+  type AdminSkinQuizLeadStatus,
+  type AdminSkinQuizLeadUpdateInput,
 } from "@/lib/admin-skin-quiz-leads";
 import { formatDateTime } from "@/lib/format";
 import { skinQuizQuestions } from "@/lib/skin-quiz";
@@ -20,13 +24,30 @@ type LeadDetailApiResponse =
   | { ok: true; data: AdminSkinQuizLeadDetail }
   | { ok: false; reason: string };
 
+type Notice = {
+  kind: "error" | "success";
+  message: string;
+} | null;
+
 type QuestionId = (typeof skinQuizQuestions)[number]["id"];
+type SourceFilterValue = "all" | "auto_home" | "header" | "home";
+type StatusFilterValue = "all" | AdminSkinQuizLeadStatus;
+type LeadFilters = {
+  search: string;
+  source: SourceFilterValue;
+  status: StatusFilterValue;
+};
 
 const SOURCE_OPTIONS = [
   { value: "all", label: "Todos los origenes" },
   { value: "auto_home", label: "Auto Home" },
   { value: "header", label: "Header" },
   { value: "home", label: "Home" },
+] as const;
+
+const STATUS_FILTER_OPTIONS = [
+  { value: "all", label: "Todos los status" },
+  ...SKIN_QUIZ_LEAD_STATUS_OPTIONS,
 ] as const;
 
 const questionMap = new Map<QuestionId, (typeof skinQuizQuestions)[number]>(
@@ -36,7 +57,7 @@ const questionMap = new Map<QuestionId, (typeof skinQuizQuestions)[number]>(
 function getLoadMessage(reason: string | null, hasFilters: boolean) {
   if (!reason) {
     return hasFilters
-      ? "No encontramos leads con esos filtros. Prueba otra busqueda o cambia el origen."
+      ? "No encontramos leads con esos filtros. Prueba otra busqueda, otro origen o cambia el status."
       : "Aun no hay leads capturados desde el Skin Quiz.";
   }
 
@@ -61,27 +82,79 @@ function getAnswerLabel(questionId: QuestionId, answerValue: string | undefined)
   return option?.label ?? answerValue.replaceAll("_", " ");
 }
 
+function getStatusBadgeClasses(status: AdminSkinQuizLeadStatus) {
+  switch (status) {
+    case "contacted":
+      return "border-[#d9c4b2] bg-[#fff3ea] text-[#8a5a2b]";
+    case "interested":
+      return "border-[#d8e3cf] bg-[#f3faf0] text-[#476638]";
+    case "purchased":
+      return "border-[#cfe0df] bg-[#eef8f7] text-[#2c6160]";
+    case "not_interested":
+      return "border-stone-200 bg-stone-100 text-stone-600";
+    case "new":
+    default:
+      return "border-[#e7d3c1] bg-[#fff8f3] text-stone-800";
+  }
+}
+
+function buildSummaryFromDetail(lead: AdminSkinQuizLeadDetail): AdminSkinQuizLead {
+  return {
+    acceptedMarketing: lead.acceptedMarketing,
+    createdAt: lead.createdAt,
+    email: lead.email,
+    id: lead.id,
+    internalNotes: lead.internalNotes,
+    lastContactedAt: lead.lastContactedAt,
+    name: lead.name,
+    primaryGoal: lead.primaryGoal,
+    resultSummary: lead.resultSummary,
+    skinType: lead.skinType,
+    source: lead.source,
+    status: lead.status,
+    whatsapp: lead.whatsapp,
+  };
+}
+
 export function SkinQuizLeadsPage() {
   const [leads, setLeads] = useState<AdminSkinQuizLead[]>([]);
   const [searchValue, setSearchValue] = useState("");
-  const [sourceValue, setSourceValue] = useState<(typeof SOURCE_OPTIONS)[number]["value"]>("all");
+  const [sourceValue, setSourceValue] = useState<SourceFilterValue>("all");
+  const [statusValue, setStatusValue] = useState<StatusFilterValue>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [errorReason, setErrorReason] = useState<string | null>(null);
+  const [pageNotice, setPageNotice] = useState<Notice>(null);
+  const [drawerNotice, setDrawerNotice] = useState<Notice>(null);
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [detailCache, setDetailCache] = useState<Record<number, AdminSkinQuizLeadDetail>>({});
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [draftStatus, setDraftStatus] = useState<AdminSkinQuizLeadStatus>("new");
+  const [draftInternalNotes, setDraftInternalNotes] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [followUpPendingLeadId, setFollowUpPendingLeadId] = useState<number | null>(null);
 
   const activeLead = selectedLeadId ? detailCache[selectedLeadId] : null;
-  const hasFilters = searchValue.trim().length > 0 || sourceValue !== "all";
+  const activeLeadId = activeLead?.id ?? null;
+  const activeLeadStatus = activeLead?.status ?? "new";
+  const activeLeadNotes = activeLead?.internalNotes ?? "";
+  const hasFilters = searchValue.trim().length > 0 || sourceValue !== "all" || statusValue !== "all";
   const leadCountLabel = useMemo(() => {
     return leads.length === 1 ? "1 lead" : `${leads.length} leads`;
   }, [leads.length]);
+  const activeFilters = useMemo<LeadFilters>(
+    () => ({
+      search: searchValue,
+      source: sourceValue,
+      status: statusValue,
+    }),
+    [searchValue, sourceValue, statusValue],
+  );
+  const hasUnsavedChanges = activeLead
+    ? draftStatus !== activeLead.status || draftInternalNotes !== activeLeadNotes
+    : false;
 
-  const loadLeads = useCallback(async (filters: {
-    search: string;
-    source: (typeof SOURCE_OPTIONS)[number]["value"];
-  }) => {
+  const loadLeads = useCallback(async (filters: LeadFilters) => {
     setIsLoading(true);
 
     const params = new URLSearchParams();
@@ -90,6 +163,9 @@ export function SkinQuizLeadsPage() {
     }
     if (filters.source !== "all") {
       params.set("source", filters.source);
+    }
+    if (filters.status !== "all") {
+      params.set("status", filters.status);
     }
 
     try {
@@ -115,9 +191,45 @@ export function SkinQuizLeadsPage() {
     }
   }, []);
 
+  const refreshLeadList = useCallback(() => {
+    return loadLeads(activeFilters);
+  }, [activeFilters, loadLeads]);
+
+  const mergeUpdatedLead = useCallback((updatedLead: AdminSkinQuizLeadDetail) => {
+    setDetailCache((current) => ({
+      ...current,
+      [updatedLead.id]: updatedLead,
+    }));
+    setLeads((current) =>
+      current.map((lead) => (lead.id === updatedLead.id ? buildSummaryFromDetail(updatedLead) : lead)),
+    );
+  }, []);
+
+  const updateLead = useCallback(async (leadId: number, payload: AdminSkinQuizLeadUpdateInput) => {
+    try {
+      const response = await fetch(`/api/admin/skin-quiz-leads/${leadId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = (await response.json()) as LeadDetailApiResponse;
+
+      if (!response.ok || !result.ok) {
+        return null;
+      }
+
+      return result.data;
+    } catch {
+      return null;
+    }
+  }, []);
+
   async function handleLeadOpen(leadId: number) {
     setSelectedLeadId(leadId);
     setDetailError(null);
+    setDrawerNotice(null);
 
     if (detailCache[leadId]) {
       return;
@@ -146,9 +258,111 @@ export function SkinQuizLeadsPage() {
     }
   }
 
+  async function handleSaveChanges() {
+    if (!activeLead) {
+      return;
+    }
+
+    if (!hasUnsavedChanges) {
+      setDrawerNotice({
+        kind: "success",
+        message: "No habia cambios por guardar.",
+      });
+      return;
+    }
+
+    const payload: AdminSkinQuizLeadUpdateInput = {};
+    if (draftStatus !== activeLead.status) {
+      payload.status = draftStatus;
+    }
+    if (draftInternalNotes !== (activeLead.internalNotes ?? "")) {
+      payload.internalNotes = draftInternalNotes.trim().length > 0 ? draftInternalNotes : null;
+    }
+
+    setIsSaving(true);
+    setDrawerNotice(null);
+
+    const updatedLead = await updateLead(activeLead.id, payload);
+    if (!updatedLead) {
+      setDrawerNotice({
+        kind: "error",
+        message: "No pudimos guardar los cambios. El detalle sigue abierto para que no pierdas tu trabajo.",
+      });
+      setIsSaving(false);
+      return;
+    }
+
+    mergeUpdatedLead(updatedLead);
+    setDrawerNotice({
+      kind: "success",
+      message: "Seguimiento guardado correctamente.",
+    });
+    setIsSaving(false);
+    void refreshLeadList();
+  }
+
+  async function handleFollowUpWhatsApp(
+    lead: AdminSkinQuizLead | AdminSkinQuizLeadDetail,
+    noticeTarget: "drawer" | "page",
+  ) {
+    if (typeof window !== "undefined") {
+      window.open(buildAdminLeadWhatsAppHref(lead.whatsapp, lead.name), "_blank", "noopener,noreferrer");
+    }
+
+    const payload: AdminSkinQuizLeadUpdateInput = {
+      lastContactedAt: new Date().toISOString(),
+    };
+    if (lead.status === "new") {
+      payload.status = "contacted";
+    }
+
+    setFollowUpPendingLeadId(lead.id);
+    if (noticeTarget === "drawer") {
+      setDrawerNotice(null);
+    } else {
+      setPageNotice(null);
+    }
+
+    const updatedLead = await updateLead(lead.id, payload);
+    if (!updatedLead) {
+      const message = "WhatsApp se abrio, pero no pudimos guardar el seguimiento en el lead.";
+      if (noticeTarget === "drawer") {
+        setDrawerNotice({ kind: "error", message });
+      } else {
+        setPageNotice({ kind: "error", message });
+      }
+      setFollowUpPendingLeadId(null);
+      return;
+    }
+
+    mergeUpdatedLead(updatedLead);
+    const message =
+      lead.status === "new"
+        ? "WhatsApp se abrio y el lead quedo marcado como contactado."
+        : "WhatsApp se abrio y actualizamos la fecha del ultimo contacto.";
+
+    if (noticeTarget === "drawer") {
+      setDrawerNotice({ kind: "success", message });
+    } else {
+      setPageNotice({ kind: "success", message });
+    }
+
+    setFollowUpPendingLeadId(null);
+    void refreshLeadList();
+  }
+
   useEffect(() => {
-    void loadLeads({ search: "", source: "all" });
+    void loadLeads({ search: "", source: "all", status: "all" });
   }, [loadLeads]);
+
+  useEffect(() => {
+    if (activeLeadId === null) {
+      return;
+    }
+
+    setDraftStatus(activeLeadStatus);
+    setDraftInternalNotes(activeLeadNotes);
+  }, [activeLeadId, activeLeadNotes, activeLeadStatus]);
 
   return (
     <>
@@ -157,9 +371,9 @@ export function SkinQuizLeadsPage() {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">Skin Quiz Leads</p>
-              <h1 className="mt-2 font-serif text-4xl text-stone-900">Oportunidades capturadas desde el advisor</h1>
+              <h1 className="mt-2 font-serif text-4xl text-stone-900">Seguimiento comercial del advisor</h1>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-600">
-                Consulta contacto, objetivo principal y la rutina que el quiz recomendo antes de hacer seguimiento por WhatsApp.
+                Consulta el estado comercial de cada lead, registra notas internas y deja trazabilidad del ultimo contacto.
               </p>
             </div>
             <div className="rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-600">
@@ -168,10 +382,11 @@ export function SkinQuizLeadsPage() {
           </div>
 
           <form
-            className="mt-6 grid gap-3 md:grid-cols-[1.4fr_0.8fr_auto]"
+            className="mt-6 grid gap-3 md:grid-cols-[1.2fr_0.8fr_0.8fr_auto]"
             onSubmit={(event) => {
               event.preventDefault();
-              void loadLeads({ search: searchValue, source: sourceValue });
+              setPageNotice(null);
+              void loadLeads(activeFilters);
             }}
           >
             <label className="space-y-2">
@@ -190,13 +405,27 @@ export function SkinQuizLeadsPage() {
               <select
                 className="w-full rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
                 onChange={(event) => {
-                  const nextSource = event.target.value as (typeof SOURCE_OPTIONS)[number]["value"];
-                  setSourceValue(nextSource);
-                  void loadLeads({ search: searchValue, source: nextSource });
+                  setSourceValue(event.target.value as SourceFilterValue);
                 }}
                 value={sourceValue}
               >
                 {SOURCE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Status</span>
+              <select
+                className="w-full rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+                onChange={(event) => {
+                  setStatusValue(event.target.value as StatusFilterValue);
+                }}
+                value={statusValue}
+              >
+                {STATUS_FILTER_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -212,6 +441,10 @@ export function SkinQuizLeadsPage() {
               </button>
             </div>
           </form>
+
+          {pageNotice ? (
+            <NoticeBanner className="mt-5" notice={pageNotice} />
+          ) : null}
         </section>
 
         <section className="soft-panel rounded-[1.8rem] p-4 sm:p-6">
@@ -235,6 +468,7 @@ export function SkinQuizLeadsPage() {
                       <th className="px-4 py-4">Email</th>
                       <th className="px-4 py-4">Objetivo</th>
                       <th className="px-4 py-4">Tipo de piel</th>
+                      <th className="px-4 py-4">Status</th>
                       <th className="px-4 py-4">Fecha</th>
                       <th className="px-4 py-4">Source</th>
                       <th className="px-4 py-4 text-right">Detalle</th>
@@ -248,19 +482,33 @@ export function SkinQuizLeadsPage() {
                           <p className="mt-1 max-w-xs text-xs leading-6 text-stone-500">{lead.resultSummary}</p>
                         </td>
                         <td className="px-4 py-4">
-                          <a
-                            className="inline-flex items-center gap-2 font-medium text-[#1a6f4e] transition hover:text-[#14553c]"
-                            href={buildAdminLeadWhatsAppHref(lead.whatsapp, lead.name)}
-                            rel="noreferrer"
-                            target="_blank"
+                          <button
+                            className="inline-flex items-center gap-2 font-medium text-[#1a6f4e] transition hover:text-[#14553c] disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={followUpPendingLeadId === lead.id}
+                            onClick={() => {
+                              void handleFollowUpWhatsApp(lead, "page");
+                            }}
+                            type="button"
                           >
                             <WhatsAppIcon className="h-4 w-4" />
-                            {lead.whatsapp}
-                          </a>
+                            {followUpPendingLeadId === lead.id ? "Registrando..." : lead.whatsapp}
+                          </button>
                         </td>
                         <td className="px-4 py-4 text-stone-600">{lead.email ?? "Sin email"}</td>
                         <td className="px-4 py-4">{lead.primaryGoal}</td>
                         <td className="px-4 py-4">{lead.skinType}</td>
+                        <td className="px-4 py-4">
+                          <div className="space-y-2">
+                            <span
+                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getStatusBadgeClasses(lead.status)}`}
+                            >
+                              {getSkinQuizLeadStatusLabel(lead.status)}
+                            </span>
+                            <p className="text-xs leading-5 text-stone-500">
+                              {lead.lastContactedAt ? `Ultimo contacto ${formatDateTime(lead.lastContactedAt)}` : "Sin seguimiento todavia"}
+                            </p>
+                          </div>
+                        </td>
                         <td className="px-4 py-4 whitespace-nowrap text-stone-600">{formatDateTime(lead.createdAt)}</td>
                         <td className="px-4 py-4">
                           <span className="rounded-full border border-stone-200 px-3 py-1 text-xs text-stone-600">
@@ -296,6 +544,7 @@ export function SkinQuizLeadsPage() {
           onClick={() => {
             setSelectedLeadId(null);
             setDetailError(null);
+            setDrawerNotice(null);
           }}
           role="dialog"
         >
@@ -318,6 +567,7 @@ export function SkinQuizLeadsPage() {
                   onClick={() => {
                     setSelectedLeadId(null);
                     setDetailError(null);
+                    setDrawerNotice(null);
                   }}
                   type="button"
                 >
@@ -335,6 +585,8 @@ export function SkinQuizLeadsPage() {
                 </div>
               ) : activeLead ? (
                 <div className="mt-6 space-y-6">
+                  {drawerNotice ? <NoticeBanner notice={drawerNotice} /> : null}
+
                   <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-2">
@@ -342,25 +594,99 @@ export function SkinQuizLeadsPage() {
                         <p className="text-sm text-stone-600">{activeLead.whatsapp}</p>
                         <p className="text-sm text-stone-600">{activeLead.email ?? "Sin email"}</p>
                       </div>
-                      <a
-                        className="inline-flex items-center justify-center gap-2 rounded-full border border-[#d9c4b2] bg-[#fff8f3] px-5 py-3 text-sm font-semibold text-stone-900 transition hover:border-stone-400"
-                        href={buildAdminLeadWhatsAppHref(activeLead.whatsapp, activeLead.name)}
-                        rel="noreferrer"
-                        target="_blank"
+                      <button
+                        className="inline-flex items-center justify-center gap-2 rounded-full border border-[#d9c4b2] bg-[#fff8f3] px-5 py-3 text-sm font-semibold text-stone-900 transition hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={followUpPendingLeadId === activeLead.id}
+                        onClick={() => {
+                          void handleFollowUpWhatsApp(activeLead, "drawer");
+                        }}
+                        type="button"
                       >
                         <WhatsAppIcon className="text-[#1a6f4e]" />
-                        Abrir WhatsApp
-                      </a>
+                        {followUpPendingLeadId === activeLead.id ? "Registrando..." : "Abrir WhatsApp"}
+                      </button>
                     </div>
 
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       <MetaPill label="Objetivo" value={activeLead.primaryGoal} />
                       <MetaPill label="Tipo de piel" value={activeLead.skinType} />
+                      <MetaPill label="Status" value={getSkinQuizLeadStatusLabel(activeLead.status)} />
                       <MetaPill label="Source" value={getSkinQuizLeadSourceLabel(activeLead.source)} />
                       <MetaPill label="Capturado" value={formatDateTime(activeLead.createdAt)} />
+                      <MetaPill
+                        label="Ultimo contacto"
+                        value={activeLead.lastContactedAt ? formatDateTime(activeLead.lastContactedAt) : "Sin contacto"}
+                      />
                     </div>
 
                     <p className="mt-5 text-sm leading-7 text-stone-600">{activeLead.resultSummary}</p>
+                  </section>
+
+                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
+                          Seguimiento comercial
+                        </p>
+                        <h3 className="mt-2 font-serif text-2xl text-stone-900">Status y notas internas</h3>
+                        <p className="mt-2 text-sm leading-7 text-stone-600">
+                          Estas notas solo son visibles dentro del panel SuperAdmin.
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getStatusBadgeClasses(draftStatus)}`}
+                      >
+                        {getSkinQuizLeadStatusLabel(draftStatus)}
+                      </span>
+                    </div>
+
+                    <div className="mt-5 grid gap-4">
+                      <label className="space-y-2">
+                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Status</span>
+                        <select
+                          className="w-full rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+                          onChange={(event) => {
+                            setDraftStatus(event.target.value as AdminSkinQuizLeadStatus);
+                          }}
+                          value={draftStatus}
+                        >
+                          {SKIN_QUIZ_LEAD_STATUS_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="space-y-2">
+                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                          Notas internas
+                        </span>
+                        <textarea
+                          className="min-h-36 w-full rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm leading-7 text-stone-900 outline-none transition focus:border-stone-500"
+                          maxLength={2000}
+                          onChange={(event) => {
+                            setDraftInternalNotes(event.target.value);
+                          }}
+                          placeholder="Ejemplo: cliente pide ayuda para cerrar rutina por WhatsApp despues de las 6 pm."
+                          value={draftInternalNotes}
+                        />
+                      </label>
+
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs text-stone-500">{draftInternalNotes.length}/2000 caracteres</p>
+                        <button
+                          className="inline-flex items-center justify-center rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={isSaving}
+                          onClick={() => {
+                            void handleSaveChanges();
+                          }}
+                          type="button"
+                        >
+                          {isSaving ? "Guardando..." : hasUnsavedChanges ? "Guardar cambios" : "Sin cambios pendientes"}
+                        </button>
+                      </div>
+                    </div>
                   </section>
 
                   <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
@@ -449,6 +775,26 @@ function MetaPill({ label, value }: { label: string; value: string }) {
     <div className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">{label}</p>
       <p className="mt-2 text-sm font-medium text-stone-900">{value}</p>
+    </div>
+  );
+}
+
+function NoticeBanner({
+  className = "",
+  notice,
+}: {
+  className?: string;
+  notice: NonNullable<Notice>;
+}) {
+  return (
+    <div
+      className={`${className} rounded-[1.4rem] border px-4 py-4 text-sm leading-7 ${
+        notice.kind === "success"
+          ? "border-[#d8e3cf] bg-[#f5faf1] text-[#476638]"
+          : "border-[#ead0c7] bg-[#fff6f2] text-[#8a4d3b]"
+      }`}
+    >
+      {notice.message}
     </div>
   );
 }

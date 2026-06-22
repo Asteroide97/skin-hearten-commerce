@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+
+SkinQuizLeadStatus = Literal["new", "contacted", "interested", "purchased", "not_interested"]
 
 
 class SkinQuizLeadCreate(BaseModel):
@@ -38,6 +40,9 @@ class SkinQuizLeadAdminSummary(BaseModel):
     whatsapp: str
     email: EmailStr | None = None
     accepted_marketing: bool = Field(serialization_alias="acceptedMarketing")
+    status: SkinQuizLeadStatus
+    internal_notes: str | None = Field(default=None, serialization_alias="internalNotes")
+    last_contacted_at: datetime | None = Field(default=None, serialization_alias="lastContactedAt")
     source: str
     created_at: datetime = Field(serialization_alias="createdAt")
     result_summary: str = Field(serialization_alias="resultSummary")
@@ -51,3 +56,17 @@ class SkinQuizLeadAdminDetail(SkinQuizLeadAdminSummary):
     answers_json: dict[str, Any] = Field(serialization_alias="answersJson")
     result_json: dict[str, Any] = Field(serialization_alias="resultJson")
     user_agent: str | None = Field(default=None, serialization_alias="userAgent")
+
+
+class SkinQuizLeadUpdate(BaseModel):
+    status: SkinQuizLeadStatus | None = None
+    internal_notes: str | None = Field(default=None, alias="internalNotes", max_length=2000)
+    last_contacted_at: datetime | None = Field(default=None, alias="lastContactedAt")
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_optional_status(self) -> "SkinQuizLeadUpdate":
+        if "status" in self.model_fields_set and self.status is None:
+            raise ValueError("status cannot be null")
+        return self

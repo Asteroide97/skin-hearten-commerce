@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { getAdminSkinQuizLeadDetail } from "@/lib/admin-skin-quiz-api";
+import { getAdminSkinQuizLeadDetail, updateAdminSkinQuizLead } from "@/lib/admin-skin-quiz-api";
+import type { AdminSkinQuizLeadUpdateInput } from "@/lib/admin-skin-quiz-leads";
 
 type RouteContext = {
   params: Promise<{
@@ -17,6 +18,23 @@ export async function GET(_: Request, context: RouteContext) {
   }
 
   const result = await getAdminSkinQuizLeadDetail(parsedLeadId);
+  if (!result.ok) {
+    return NextResponse.json(result, { status: result.status ?? 503 });
+  }
+
+  return NextResponse.json(result);
+}
+
+export async function PATCH(request: Request, context: RouteContext) {
+  const { leadId } = await context.params;
+  const parsedLeadId = Number(leadId);
+
+  if (!Number.isFinite(parsedLeadId)) {
+    return NextResponse.json({ ok: false, reason: "invalid_lead_id" }, { status: 400 });
+  }
+
+  const payload = (await request.json()) as AdminSkinQuizLeadUpdateInput;
+  const result = await updateAdminSkinQuizLead(parsedLeadId, payload);
   if (!result.ok) {
     return NextResponse.json(result, { status: result.status ?? 503 });
   }

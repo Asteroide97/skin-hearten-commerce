@@ -289,6 +289,9 @@ def create_skin_quiz_lead(payload: dict) -> dict:
     lead = {
         "id": next_id,
         "created_at": datetime.now(timezone.utc),
+        "status": "new",
+        "internal_notes": None,
+        "last_contacted_at": None,
         **payload,
     }
     SKIN_QUIZ_LEADS.append(lead)
@@ -300,6 +303,7 @@ def list_skin_quiz_leads(
     date_from: datetime | None = None,
     date_to: datetime | None = None,
     search: str | None = None,
+    status: str | None = None,
     source: str | None = None,
 ) -> list[dict]:
     normalized_search = search.strip().lower() if search else None
@@ -309,6 +313,8 @@ def list_skin_quiz_leads(
     for lead in leads:
         created_at = lead["created_at"]
         if source and lead.get("source") != source:
+            continue
+        if status and (lead.get("status") or "new") != status:
             continue
         if date_from and created_at < date_from:
             continue
@@ -333,4 +339,13 @@ def get_skin_quiz_lead(lead_id: int) -> dict | None:
     lead = next((entry for entry in SKIN_QUIZ_LEADS if entry["id"] == lead_id), None)
     if not lead:
         return None
+    return deepcopy(lead)
+
+
+def update_skin_quiz_lead(lead_id: int, payload: dict) -> dict | None:
+    lead = next((entry for entry in SKIN_QUIZ_LEADS if entry["id"] == lead_id), None)
+    if not lead:
+        return None
+
+    lead.update(payload)
     return deepcopy(lead)
