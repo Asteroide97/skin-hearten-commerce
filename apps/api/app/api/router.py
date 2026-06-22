@@ -5,6 +5,7 @@ from app.api.routes import (
     admin_categories,
     admin_orders,
     admin_products,
+    admin_skin_quiz_leads,
     auth,
     blog,
     brands,
@@ -32,3 +33,4 @@ api_router.include_router(admin_products.router, tags=["admin-products"])
 api_router.include_router(admin_categories.router, tags=["admin-categories"])
 api_router.include_router(admin_brands.router, tags=["admin-brands"])
 api_router.include_router(admin_orders.router, tags=["admin-orders"])
+api_router.include_router(admin_skin_quiz_leads.router, tags=["admin-skin-quiz-leads"])

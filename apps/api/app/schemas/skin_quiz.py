@@ -30,3 +30,24 @@ class SkinQuizLeadCreateResponse(BaseModel):
     created_at: datetime = Field(serialization_alias="createdAt")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class SkinQuizLeadAdminSummary(BaseModel):
+    id: int
+    name: str
+    whatsapp: str
+    email: EmailStr | None = None
+    accepted_marketing: bool = Field(serialization_alias="acceptedMarketing")
+    source: str
+    created_at: datetime = Field(serialization_alias="createdAt")
+    result_summary: str = Field(serialization_alias="resultSummary")
+    primary_goal: str = Field(serialization_alias="primaryGoal")
+    skin_type: str = Field(serialization_alias="skinType")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class SkinQuizLeadAdminDetail(SkinQuizLeadAdminSummary):
+    answers_json: dict[str, Any] = Field(serialization_alias="answersJson")
+    result_json: dict[str, Any] = Field(serialization_alias="resultJson")
+    user_agent: str | None = Field(default=None, serialization_alias="userAgent")

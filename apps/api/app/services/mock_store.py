@@ -293,3 +293,44 @@ def create_skin_quiz_lead(payload: dict) -> dict:
     }
     SKIN_QUIZ_LEADS.append(lead)
     return deepcopy(lead)
+
+
+def list_skin_quiz_leads(
+    *,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    search: str | None = None,
+    source: str | None = None,
+) -> list[dict]:
+    normalized_search = search.strip().lower() if search else None
+    leads = [deepcopy(lead) for lead in SKIN_QUIZ_LEADS]
+
+    filtered: list[dict] = []
+    for lead in leads:
+        created_at = lead["created_at"]
+        if source and lead.get("source") != source:
+            continue
+        if date_from and created_at < date_from:
+            continue
+        if date_to and created_at >= date_to:
+            continue
+        if normalized_search:
+            haystack = " ".join(
+                [
+                    str(lead.get("name") or ""),
+                    str(lead.get("whatsapp") or ""),
+                    str(lead.get("email") or ""),
+                ]
+            ).lower()
+            if normalized_search not in haystack:
+                continue
+        filtered.append(lead)
+
+    return sorted(filtered, key=lambda lead: lead["created_at"], reverse=True)
+
+
+def get_skin_quiz_lead(lead_id: int) -> dict | None:
+    lead = next((entry for entry in SKIN_QUIZ_LEADS if entry["id"] == lead_id), None)
+    if not lead:
+        return None
+    return deepcopy(lead)

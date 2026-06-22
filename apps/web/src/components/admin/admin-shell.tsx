@@ -8,6 +8,7 @@ const sections = [
   { href: "/admin/productos", label: "Productos" },
   { href: "/admin/pedidos", label: "Pedidos" },
   { href: "/admin/clientes", label: "Clientes" },
+  { href: "/admin/skin-quiz-leads", label: "Skin Quiz Leads" },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -42,4 +43,3 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
