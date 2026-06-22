@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from datetime import date, datetime, time, timedelta
 from collections.abc import Mapping
 from typing import Any
@@ -34,6 +35,13 @@ _skin_type_labels = {
     "sensible": "Sensible",
     "no_segura": "No estoy segura",
 }
+_age_range_labels = {
+    "18_24": "18 a 24",
+    "25_34": "25 a 34",
+    "35_44": "35 a 44",
+    "45_plus": "45+",
+}
+_recent_leads_limit = 8
 
 
 def _ensure_skin_quiz_table() -> None:
@@ -65,6 +73,25 @@ def _normalize_skin_type(skin_type: str | None) -> str:
     if not skin_type:
         return "Sin definir"
     return _skin_type_labels.get(skin_type, skin_type.replace("_", " ").title())
+
+
+def _normalize_age_range(age_range: str | None) -> str:
+    if not age_range:
+        return "Sin definir"
+    return _age_range_labels.get(age_range, age_range.replace("_", " ").title())
+
+
+def _normalize_datetime(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=datetime.now().astimezone().tzinfo)
+    return value.astimezone(datetime.now().astimezone().tzinfo)
+
+
+def _serialize_counter(counter: Counter[str], key_name: str) -> list[dict[str, Any]]:
+    return [
+        {key_name: label, "count": count}
+        for label, count in sorted(counter.items(), key=lambda item: (-item[1], item[0]))
+    ]
 
 
 def _summarize_result(summary: str | None, max_length: int = 160) -> str:
@@ -125,6 +152,79 @@ def _serialize_detail(lead: Mapping[str, Any]) -> dict[str, Any]:
         }
     )
     return summary
+
+
+def _build_skin_quiz_analytics(leads: list[Mapping[str, Any]]) -> dict[str, Any]:
+    now = datetime.now().astimezone()
+    start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    start_of_week = start_of_today - timedelta(days=start_of_today.weekday())
+    start_of_month = start_of_today.replace(day=1)
+
+    normalized_leads = sorted(
+        [
+            {
+                **lead,
+                "created_at": _normalize_datetime(lead["created_at"]),
+            }
+            for lead in leads
+        ],
+        key=lambda lead: lead["created_at"],
+        reverse=True,
+    )
+
+    goal_counter: Counter[str] = Counter()
+    skin_type_counter: Counter[str] = Counter()
+    age_range_counter: Counter[str] = Counter()
+    status_counter: Counter[str] = Counter()
+    source_counter: Counter[str] = Counter()
+
+    leads_today = 0
+    leads_this_week = 0
+    leads_this_month = 0
+
+    for lead in normalized_leads:
+        answers = lead.get("answers_json") or {}
+        created_at = lead["created_at"]
+
+        goal_counter[_normalize_goal(answers.get("goal"))] += 1
+        skin_type_counter[_normalize_skin_type(answers.get("skinType"))] += 1
+        age_range_counter[_normalize_age_range(answers.get("ageRange"))] += 1
+        status_counter[str(lead.get("status") or "new")] += 1
+        source_counter[str(lead.get("source") or "unknown")] += 1
+
+        if created_at >= start_of_today:
+            leads_today += 1
+        if created_at >= start_of_week:
+            leads_this_week += 1
+        if created_at >= start_of_month:
+            leads_this_month += 1
+
+    recent_leads = [
+        {
+            "id": lead["id"],
+            "name": lead["name"],
+            "whatsapp": lead["whatsapp"],
+            "goal": _normalize_goal((lead.get("answers_json") or {}).get("goal")),
+            "skin_type": _normalize_skin_type((lead.get("answers_json") or {}).get("skinType")),
+            "status": str(lead.get("status") or "new"),
+            "created_at": lead["created_at"],
+        }
+        for lead in normalized_leads[:_recent_leads_limit]
+    ]
+
+    return {
+        "total_leads": len(normalized_leads),
+        "leads_today": leads_today,
+        "leads_this_week": leads_this_week,
+        "leads_this_month": leads_this_month,
+        "completion_rate_estimate": None,
+        "top_goals": _serialize_counter(goal_counter, "goal"),
+        "top_skin_types": _serialize_counter(skin_type_counter, "skin_type"),
+        "top_age_ranges": _serialize_counter(age_range_counter, "age_range"),
+        "status_breakdown": _serialize_counter(status_counter, "status"),
+        "source_breakdown": _serialize_counter(source_counter, "source"),
+        "recent_leads": recent_leads,
+    }
 
 
 def create_skin_quiz_lead(
@@ -265,3 +365,16 @@ def update_skin_quiz_lead(
         if not lead:
             return None
         return _serialize_detail(lead)
+
+
+def get_skin_quiz_analytics(db: Session) -> dict[str, Any]:
+    try:
+        _ensure_skin_quiz_table()
+        leads = [
+            _lead_to_dict(lead)
+            for lead in db.query(SkinQuizLead).order_by(desc(SkinQuizLead.created_at)).all()
+        ]
+        return _build_skin_quiz_analytics(leads)
+    except SQLAlchemyError:
+        db.rollback()
+        return _build_skin_quiz_analytics(list_mock_skin_quiz_leads())

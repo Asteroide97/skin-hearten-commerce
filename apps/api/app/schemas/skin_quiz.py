@@ -70,3 +70,60 @@ class SkinQuizLeadUpdate(BaseModel):
         if "status" in self.model_fields_set and self.status is None:
             raise ValueError("status cannot be null")
         return self
+
+
+class SkinQuizGoalCount(BaseModel):
+    goal: str
+    count: int
+
+
+class SkinQuizSkinTypeCount(BaseModel):
+    skin_type: str = Field(serialization_alias="skinType")
+    count: int
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class SkinQuizAgeRangeCount(BaseModel):
+    age_range: str = Field(serialization_alias="ageRange")
+    count: int
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class SkinQuizStatusCount(BaseModel):
+    status: SkinQuizLeadStatus
+    count: int
+
+
+class SkinQuizSourceCount(BaseModel):
+    source: str
+    count: int
+
+
+class SkinQuizAnalyticsRecentLead(BaseModel):
+    id: int
+    name: str
+    whatsapp: str
+    goal: str
+    skin_type: str = Field(serialization_alias="skinType")
+    status: SkinQuizLeadStatus
+    created_at: datetime = Field(serialization_alias="createdAt")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class SkinQuizAnalyticsResponse(BaseModel):
+    total_leads: int = Field(serialization_alias="totalLeads")
+    leads_today: int = Field(serialization_alias="leadsToday")
+    leads_this_week: int = Field(serialization_alias="leadsThisWeek")
+    leads_this_month: int = Field(serialization_alias="leadsThisMonth")
+    completion_rate_estimate: float | None = Field(serialization_alias="completionRateEstimate")
+    top_goals: list[SkinQuizGoalCount] = Field(serialization_alias="topGoals")
+    top_skin_types: list[SkinQuizSkinTypeCount] = Field(serialization_alias="topSkinTypes")
+    top_age_ranges: list[SkinQuizAgeRangeCount] = Field(serialization_alias="topAgeRanges")
+    status_breakdown: list[SkinQuizStatusCount] = Field(serialization_alias="statusBreakdown")
+    source_breakdown: list[SkinQuizSourceCount] = Field(serialization_alias="sourceBreakdown")
+    recent_leads: list[SkinQuizAnalyticsRecentLead] = Field(serialization_alias="recentLeads")
+
+    model_config = ConfigDict(populate_by_name=True)

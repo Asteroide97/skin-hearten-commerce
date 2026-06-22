@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { SkinQuizAnalyticsResponse } from "@/lib/admin-skin-quiz-analytics";
 import type {
   AdminSkinQuizLead,
   AdminSkinQuizLeadDetail,
@@ -68,7 +69,7 @@ async function getAdminAccessToken(): Promise<string | null> {
 async function requestAdminJson<TData>(
   path: string,
   options?: {
-    body?: AdminSkinQuizLeadUpdateInput;
+    body?: AdminSkinQuizLeadUpdateInput | Record<string, unknown>;
     filters?: AdminSkinQuizLeadFilters;
     method?: "GET" | "PATCH";
   },
@@ -131,4 +132,8 @@ export async function updateAdminSkinQuizLead(leadId: number, payload: AdminSkin
     body: payload,
     method: "PATCH",
   });
+}
+
+export async function getAdminSkinQuizAnalytics() {
+  return requestAdminJson<SkinQuizAnalyticsResponse>("/admin/skin-quiz/analytics");
 }
