@@ -10,9 +10,19 @@ app = FastAPI(
     openapi_url=f"{settings.api_v1_str}/openapi.json",
 )
 
+default_local_origins = [
+    settings.frontend_url,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3006",
+    "http://127.0.0.1:3006",
+    "http://localhost:3007",
+    "http://127.0.0.1:3007",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url],
+    allow_origins=list(dict.fromkeys(default_local_origins)),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,4 +35,3 @@ def healthcheck() -> dict[str, str]:
 
 
 app.include_router(api_router, prefix=settings.api_v1_str)
-

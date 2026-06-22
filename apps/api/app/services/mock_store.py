@@ -380,7 +380,37 @@ ORDERS = [
     }
 ]
 
+PAYMENTS = [
+    {
+        "id": 1,
+        "order_id": 1,
+        "provider": "mercadopago",
+        "provider_reference": "mer_demo_001",
+        "status": "paid",
+        "amount": 1129.0,
+        "created_at": datetime.now(timezone.utc),
+        "paid_at": datetime.now(timezone.utc),
+    }
+]
+
+INVENTORY_MOVEMENTS = [
+    {
+        "id": 1,
+        "product_id": 2,
+        "user_id": None,
+        "movement_type": "exit",
+        "quantity": 1,
+        "reason": "Initial demo order SH-1043",
+        "created_at": datetime.now(timezone.utc),
+    }
+]
+
 SKIN_QUIZ_LEADS: list[dict] = []
+CHECKOUT_IDEMPOTENCY: dict[str, dict] = {}
+CRM_CONTACTS: list[dict] = []
+CRM_EVENTS: list[dict] = []
+CRM_NOTES: list[dict] = []
+CRM_TASKS: list[dict] = []
 
 
 def list_products() -> list[dict]:
@@ -425,6 +455,35 @@ def create_mock_customer(payload: dict) -> dict:
     CUSTOMERS.append(customer)
     CARTS[next_id] = {"customer_id": next_id, "items": []}
     return deepcopy(customer)
+
+
+def upsert_mock_customer_from_checkout(
+    *,
+    email: str,
+    first_name: str,
+    last_name: str,
+    phone: str,
+) -> dict:
+    customer = next((entry for entry in CUSTOMERS if entry["email"].lower() == email.lower()), None)
+    if customer:
+        customer.update(
+            {
+                "first_name": first_name,
+                "last_name": last_name,
+                "phone": phone,
+            }
+        )
+        return deepcopy(customer)
+
+    return create_mock_customer(
+        {
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "phone": phone,
+            "hashed_password": get_password_hash(f"checkout-{email.lower()}"),
+        }
+    )
 
 
 def get_cart(customer_id: int) -> dict:
@@ -478,8 +537,12 @@ def get_order_by_id(order_id: int) -> dict | None:
     return next((deepcopy(order) for order in ORDERS if order["id"] == order_id), None)
 
 
+def get_next_order_id() -> int:
+    return max(entry["id"] for entry in ORDERS) + 1 if ORDERS else 1
+
+
 def create_order(order: dict) -> dict:
-    next_id = max(entry["id"] for entry in ORDERS) + 1 if ORDERS else 1
+    next_id = get_next_order_id()
     order_payload = {"id": next_id, **order}
     ORDERS.append(order_payload)
     CARTS[order["customer_id"]] = {"customer_id": order["customer_id"], "items": []}
@@ -493,6 +556,258 @@ def update_order_status(order_id: int, status: str) -> dict | None:
 
     order["status"] = status
     return deepcopy(order)
+
+
+def create_payment(payload: dict) -> dict:
+    next_id = max(payment["id"] for payment in PAYMENTS) + 1 if PAYMENTS else 1
+    payment = {
+        "id": next_id,
+        "created_at": datetime.now(timezone.utc),
+        **payload,
+    }
+    PAYMENTS.append(payment)
+    return deepcopy(payment)
+
+
+def get_coupon_by_code(code: str) -> dict | None:
+    return next((deepcopy(coupon) for coupon in COUPONS if coupon["code"] == code.upper()), None)
+
+
+def reserve_product_inventory(
+    *,
+    product_id: int,
+    quantity: int,
+    reason: str,
+    user_id: int | None = None,
+) -> dict | None:
+    product = next((entry for entry in PRODUCTS if entry["id"] == product_id), None)
+    if not product:
+        return None
+
+    product["stock"] = max(0, int(product.get("stock", 0)) - quantity)
+    next_id = max(movement["id"] for movement in INVENTORY_MOVEMENTS) + 1 if INVENTORY_MOVEMENTS else 1
+    movement = {
+        "id": next_id,
+        "product_id": product_id,
+        "user_id": user_id,
+        "movement_type": "exit",
+        "quantity": quantity,
+        "reason": reason,
+        "created_at": datetime.now(timezone.utc),
+    }
+    INVENTORY_MOVEMENTS.append(movement)
+    return deepcopy(movement)
+
+
+def get_checkout_by_idempotency_key(idempotency_key: str) -> dict | None:
+    response = CHECKOUT_IDEMPOTENCY.get(idempotency_key)
+    if not response:
+        return None
+    return deepcopy(response)
+
+
+def store_checkout_by_idempotency_key(idempotency_key: str, response: dict) -> dict:
+    CHECKOUT_IDEMPOTENCY[idempotency_key] = deepcopy(response)
+    return deepcopy(response)
+
+
+def _normalize_email(value: str | None) -> str | None:
+    if not value:
+        return None
+    normalized = value.strip().lower()
+    return normalized or None
+
+
+def _normalize_phone(value: str | None) -> str | None:
+    if not value:
+        return None
+    normalized = "".join(character for character in value if character.isdigit())
+    return normalized or None
+
+
+def find_crm_contact(*, email: str | None = None, whatsapp: str | None = None) -> dict | None:
+    normalized_email = _normalize_email(email)
+    normalized_whatsapp = _normalize_phone(whatsapp)
+
+    for contact in CRM_CONTACTS:
+        if normalized_email and _normalize_email(contact.get("email")) == normalized_email:
+            return deepcopy(contact)
+        if normalized_whatsapp and _normalize_phone(contact.get("whatsapp")) == normalized_whatsapp:
+            return deepcopy(contact)
+    return None
+
+
+def upsert_crm_contact(payload: dict) -> dict:
+    existing = find_crm_contact(email=payload.get("email"), whatsapp=payload.get("whatsapp"))
+    now = datetime.now(timezone.utc)
+
+    if existing:
+        contact = next((entry for entry in CRM_CONTACTS if entry["id"] == existing["id"]), None)
+        if not contact:
+            return deepcopy(existing)
+
+        for key, value in payload.items():
+            if value is not None:
+                contact[key] = value
+        contact["updated_at"] = now
+        contact["last_seen_at"] = payload.get("last_seen_at", now)
+        return deepcopy(contact)
+
+    next_id = max(contact["id"] for contact in CRM_CONTACTS) + 1 if CRM_CONTACTS else 1
+    contact = {
+        "id": next_id,
+        "first_name": payload.get("first_name") or "Contacto",
+        "last_name": payload.get("last_name"),
+        "email": payload.get("email"),
+        "whatsapp": payload.get("whatsapp"),
+        "source": payload.get("source") or "unknown",
+        "lifecycle_status": payload.get("lifecycle_status") or "lead",
+        "skin_type": payload.get("skin_type"),
+        "main_goal": payload.get("main_goal"),
+        "age_range": payload.get("age_range"),
+        "accepted_marketing": bool(payload.get("accepted_marketing", False)),
+        "first_seen_at": payload.get("first_seen_at", now),
+        "last_seen_at": payload.get("last_seen_at", now),
+        "created_at": payload.get("created_at", now),
+        "updated_at": payload.get("updated_at", now),
+    }
+    CRM_CONTACTS.append(contact)
+    return deepcopy(contact)
+
+
+def list_crm_contacts(
+    *,
+    accepted_marketing: bool | None = None,
+    lifecycle_status: str | None = None,
+    main_goal: str | None = None,
+    search: str | None = None,
+    skin_type: str | None = None,
+) -> list[dict]:
+    normalized_search = search.strip().lower() if search else None
+
+    filtered: list[dict] = []
+    for contact in CRM_CONTACTS:
+        if accepted_marketing is not None and bool(contact.get("accepted_marketing")) != accepted_marketing:
+            continue
+        if lifecycle_status and contact.get("lifecycle_status") != lifecycle_status:
+            continue
+        if skin_type and contact.get("skin_type") != skin_type:
+            continue
+        if main_goal and contact.get("main_goal") != main_goal:
+            continue
+        if normalized_search:
+            haystack = " ".join(
+                [
+                    str(contact.get("first_name") or ""),
+                    str(contact.get("last_name") or ""),
+                    str(contact.get("email") or ""),
+                    str(contact.get("whatsapp") or ""),
+                ]
+            ).lower()
+            if normalized_search not in haystack:
+                continue
+        filtered.append(deepcopy(contact))
+
+    return sorted(
+        filtered,
+        key=lambda contact: contact.get("last_seen_at") or contact.get("created_at"),
+        reverse=True,
+    )
+
+
+def get_crm_contact(contact_id: int) -> dict | None:
+    contact = next((entry for entry in CRM_CONTACTS if entry["id"] == contact_id), None)
+    if not contact:
+        return None
+    return deepcopy(contact)
+
+
+def update_crm_contact(contact_id: int, payload: dict) -> dict | None:
+    contact = next((entry for entry in CRM_CONTACTS if entry["id"] == contact_id), None)
+    if not contact:
+        return None
+
+    for key, value in payload.items():
+        if value is not None or key == "accepted_marketing":
+            contact[key] = value
+    contact["updated_at"] = datetime.now(timezone.utc)
+    return deepcopy(contact)
+
+
+def create_crm_event(payload: dict) -> dict:
+    next_id = max(event["id"] for event in CRM_EVENTS) + 1 if CRM_EVENTS else 1
+    event = {
+        "id": next_id,
+        "created_at": datetime.now(timezone.utc),
+        **payload,
+    }
+    CRM_EVENTS.append(event)
+
+    contact_id = event.get("contact_id")
+    if contact_id is not None:
+        contact = next((entry for entry in CRM_CONTACTS if entry["id"] == contact_id), None)
+        if contact:
+            contact["last_seen_at"] = event["created_at"]
+            contact["updated_at"] = event["created_at"]
+
+    return deepcopy(event)
+
+
+def list_crm_events(contact_id: int, limit: int | None = None) -> list[dict]:
+    events = [deepcopy(event) for event in CRM_EVENTS if event.get("contact_id") == contact_id]
+    events.sort(key=lambda event: event["created_at"], reverse=True)
+    return events[:limit] if limit is not None else events
+
+
+def create_crm_note(payload: dict) -> dict:
+    next_id = max(note["id"] for note in CRM_NOTES) + 1 if CRM_NOTES else 1
+    note = {
+        "id": next_id,
+        "created_at": datetime.now(timezone.utc),
+        **payload,
+    }
+    CRM_NOTES.append(note)
+    return deepcopy(note)
+
+
+def list_crm_notes(contact_id: int) -> list[dict]:
+    notes = [deepcopy(note) for note in CRM_NOTES if note["contact_id"] == contact_id]
+    notes.sort(key=lambda note: note["created_at"], reverse=True)
+    return notes
+
+
+def create_crm_task(payload: dict) -> dict:
+    next_id = max(task["id"] for task in CRM_TASKS) + 1 if CRM_TASKS else 1
+    task = {
+        "id": next_id,
+        "created_at": datetime.now(timezone.utc),
+        "completed_at": payload.get("completed_at"),
+        **payload,
+    }
+    CRM_TASKS.append(task)
+    return deepcopy(task)
+
+
+def list_crm_tasks(contact_id: int) -> list[dict]:
+    tasks = [deepcopy(task) for task in CRM_TASKS if task["contact_id"] == contact_id]
+    tasks.sort(key=lambda task: task["created_at"], reverse=True)
+    return tasks
+
+
+def get_crm_task(task_id: int) -> dict | None:
+    task = next((entry for entry in CRM_TASKS if entry["id"] == task_id), None)
+    if not task:
+        return None
+    return deepcopy(task)
+
+
+def update_crm_task(task_id: int, payload: dict) -> dict | None:
+    task = next((entry for entry in CRM_TASKS if entry["id"] == task_id), None)
+    if not task:
+        return None
+
+    task.update(payload)
+    return deepcopy(task)
 
 
 def create_product(payload: dict) -> dict:

@@ -6,11 +6,10 @@ export default function CheckoutPage() {
     <div className="mx-auto max-w-7xl space-y-8 px-5 py-8 sm:px-6 lg:px-8">
       <SectionHeading
         eyebrow="Checkout"
-        title="Compra segura con validaciones completas"
-        description="Formulario estructurado para Mercado Pago, PayPal y Stripe."
+        title="Compra segura con pedido persistido"
+        description="Formulario conectado al backend para validar, crear orden y confirmar el flujo actual."
       />
       <CheckoutForm />
     </div>
   );
 }
-

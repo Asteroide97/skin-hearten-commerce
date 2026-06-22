@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.db.session import engine
 from app.models import Base, SkinQuizLead
 from app.schemas.skin_quiz import SkinQuizLeadCreate, SkinQuizLeadUpdate
+from app.services.crm import upsert_contact_from_skin_quiz_lead
 from app.services.mock_store import (
     create_skin_quiz_lead as create_mock_skin_quiz_lead,
     get_skin_quiz_lead as get_mock_skin_quiz_lead,
@@ -232,6 +233,7 @@ def create_skin_quiz_lead(
     payload: SkinQuizLeadCreate,
     user_agent: str | None = None,
 ) -> Mapping[str, Any]:
+    lead_response: Mapping[str, Any]
     try:
         _ensure_skin_quiz_table()
         lead = SkinQuizLead(
@@ -248,13 +250,13 @@ def create_skin_quiz_lead(
         db.add(lead)
         db.commit()
         db.refresh(lead)
-        return {
+        lead_response = {
             "id": lead.id,
             "created_at": lead.created_at,
         }
     except SQLAlchemyError:
         db.rollback()
-        return create_mock_skin_quiz_lead(
+        lead_response = create_mock_skin_quiz_lead(
             {
                 "name": payload.name,
                 "whatsapp": payload.whatsapp,
@@ -267,6 +269,17 @@ def create_skin_quiz_lead(
                 "user_agent": user_agent,
             }
         )
+
+    try:
+        upsert_contact_from_skin_quiz_lead(
+            db,
+            payload=payload,
+            lead_id=int(lead_response["id"]),
+        )
+    except Exception:
+        db.rollback()
+
+    return lead_response
 
 
 def list_skin_quiz_lead_summaries(

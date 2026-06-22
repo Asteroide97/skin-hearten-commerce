@@ -1,10 +1,18 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 
 import { trackEvent } from "@/lib/analytics";
+import {
+  buildCheckoutIdempotencyKey,
+  buildCheckoutRequestPayload,
+  saveLastCheckoutOrder,
+  submitCheckoutOrder,
+} from "@/lib/checkout";
 import { formatCurrency } from "@/lib/format";
 import { checkoutSchema, type CheckoutValues } from "@/schemas/checkout";
 import {
@@ -23,8 +31,9 @@ const paymentMethods = [
 ] as const;
 
 export function CheckoutForm() {
-  const [isPending, startTransition] = useTransition();
-  const [submitted, setSubmitted] = useState(false);
+  const router = useRouter();
+  const idempotencyKeyRef = useRef<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const { items, discountRate, couponCode, clearCart } = useCartStore();
   const subtotal = getCartSubtotal(items);
   const discount = getCartDiscount(subtotal, discountRate);
@@ -40,44 +49,88 @@ export function CheckoutForm() {
       email: "",
       phone: "",
       addressLine1: "",
+      addressLine2: "",
       city: "",
       state: "",
       postalCode: "",
+      country: "Mexico",
       paymentMethod: "stripe",
     },
   });
 
-  if (submitted) {
-    return (
-      <div className="soft-panel rounded-[1.8rem] p-8">
-        <h2 className="font-serif text-3xl text-stone-900">Pedido creado</h2>
-        <p className="mt-3 max-w-xl text-sm leading-7 text-stone-600">
-          El flujo visual de checkout quedo armado con validacion completa. El siguiente paso es
-          conectar este submit con `POST /checkout` y el proveedor elegido.
-        </p>
-      </div>
-    );
+  async function handleCheckoutSubmit(values: CheckoutValues) {
+    if (items.length === 0) {
+      setSubmitError("Tu carrito esta vacio. Agrega productos antes de confirmar el pedido.");
+      return;
+    }
+
+    setSubmitError(null);
+    idempotencyKeyRef.current ??= buildCheckoutIdempotencyKey();
+
+    trackEvent("purchase_attempted", {
+      payment_method: values.paymentMethod,
+      cart_total: total,
+      item_count: itemCount,
+    });
+
+    const payload = buildCheckoutRequestPayload({
+      couponCode,
+      customer: {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+        phone: values.phone,
+      },
+      items,
+      paymentMethod: values.paymentMethod,
+      shippingAddress: {
+        line1: values.addressLine1,
+        line2: values.addressLine2,
+        city: values.city,
+        state: values.state,
+        postalCode: values.postalCode,
+        country: values.country,
+      },
+    });
+
+    const result = await submitCheckoutOrder(payload, idempotencyKeyRef.current);
+    if (!result.ok) {
+      setSubmitError(result.message);
+      return;
+    }
+
+    saveLastCheckoutOrder({
+      ...result.data,
+      customerName: `${values.firstName} ${values.lastName}`.trim(),
+      createdAt: new Date().toISOString(),
+    });
+    clearCart();
+    trackEvent("checkout_completed", {
+      order_id: result.data.orderId,
+      order_number: result.data.orderNumber,
+      payment_method: values.paymentMethod,
+      payment_status: result.data.paymentStatus,
+      cart_total: result.data.total,
+      item_count: itemCount,
+    });
+    idempotencyKeyRef.current = null;
+    router.push("/checkout/gracias");
   }
+
+  const isSubmitting = form.formState.isSubmitting;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <form
         className="soft-panel space-y-6 rounded-[1.8rem] p-6"
-        onSubmit={form.handleSubmit((values) => {
-          trackEvent("purchase_attempted", {
-            payment_method: values.paymentMethod,
-            cart_total: total,
-            item_count: itemCount,
-          });
-          startTransition(() => {
-            clearCart();
-            setSubmitted(true);
-          });
-        })}
+        onSubmit={form.handleSubmit(handleCheckoutSubmit)}
       >
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">Checkout</p>
           <h2 className="mt-2 font-serif text-3xl text-stone-900">Datos de envio y pago</h2>
+          <p className="mt-3 text-sm leading-7 text-stone-600">
+            El pedido se valida y calcula del lado backend antes de confirmarse.
+          </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -93,6 +146,14 @@ export function CheckoutForm() {
               error={form.formState.errors.addressLine1?.message}
             />
           </div>
+          <div className="sm:col-span-2">
+            <Field
+              label="Interior, colonia o referencias"
+              name="addressLine2"
+              register={form.register}
+              error={form.formState.errors.addressLine2?.message}
+            />
+          </div>
           <Field label="Ciudad" name="city" register={form.register} error={form.formState.errors.city?.message} />
           <Field label="Estado" name="state" register={form.register} error={form.formState.errors.state?.message} />
           <Field
@@ -101,6 +162,7 @@ export function CheckoutForm() {
             register={form.register}
             error={form.formState.errors.postalCode?.message}
           />
+          <Field label="Pais" name="country" register={form.register} error={form.formState.errors.country?.message} />
         </div>
 
         <fieldset className="space-y-3">
@@ -118,12 +180,18 @@ export function CheckoutForm() {
           </div>
         </fieldset>
 
+        {submitError ? (
+          <div className="rounded-[1.4rem] border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">
+            {submitError}
+          </div>
+        ) : null}
+
         <button
           className="rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white disabled:bg-stone-300"
-          disabled={isPending || items.length === 0}
+          disabled={isSubmitting || items.length === 0}
           type="submit"
         >
-          {isPending ? "Procesando..." : "Confirmar pedido"}
+          {isSubmitting ? "Creando pedido..." : "Confirmar pedido"}
         </button>
       </form>
 

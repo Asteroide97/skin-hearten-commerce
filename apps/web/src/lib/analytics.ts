@@ -37,6 +37,14 @@ export type AnalyticsEventMap = {
     cart_total: number;
     item_count: number;
   };
+  checkout_completed: {
+    order_id: number;
+    order_number: string;
+    payment_method: "mercadopago" | "paypal" | "stripe";
+    payment_status: string;
+    cart_total: number;
+    item_count: number;
+  };
   skin_quiz_opened: {
     source: SkinQuizAnalyticsSource;
     has_saved_result: boolean;
