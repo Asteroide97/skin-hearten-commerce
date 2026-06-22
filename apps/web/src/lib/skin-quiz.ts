@@ -98,6 +98,14 @@ type CandidateStep = SkinQuizRoutineStep & {
   priority: number;
 };
 
+type ProductSelectionOptions = {
+  categories?: string[];
+  concerns?: string[];
+  skinTypes?: string[];
+  preferBestSeller?: boolean;
+  preferFeatured?: boolean;
+};
+
 const skinTypeLabels: Record<SkinQuizSkinType, string> = {
   seca: "seca",
   mixta: "mixta",
@@ -212,8 +220,88 @@ function getStorage(): BrowserStorage | null {
   };
 }
 
-function getProductMap(products: Product[]) {
-  return new Map(products.map((product) => [product.id, product]));
+function normalizeQuizText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function getPreferredSkinTypes(answers: SkinQuizAnswers, isSensitive: boolean) {
+  const skinTypes: string[] = [];
+
+  switch (answers.skinType) {
+    case "seca":
+      skinTypes.push("Seca");
+      break;
+    case "mixta":
+      skinTypes.push("Mixta");
+      break;
+    case "grasa":
+      skinTypes.push("Grasa");
+      break;
+    case "sensible":
+      skinTypes.push("Sensible");
+      break;
+    case "no_segura":
+    default:
+      break;
+  }
+
+  if (isSensitive && !skinTypes.includes("Sensible")) {
+    skinTypes.push("Sensible");
+  }
+
+  if (answers.goal === "acne") {
+    skinTypes.push("Mixta", "Grasa");
+  }
+
+  if (answers.goal === "lineas_expresion" || answers.goal === "hidratacion") {
+    skinTypes.push("Seca", "Madura");
+  }
+
+  return Array.from(new Set(skinTypes));
+}
+
+function selectCatalogProduct(products: Product[], options: ProductSelectionOptions, fallback: Product) {
+  const normalizedCategories = options.categories?.map((value) => normalizeQuizText(value)) ?? [];
+  const normalizedConcerns = options.concerns?.map((value) => normalizeQuizText(value)) ?? [];
+  const normalizedSkinTypes = options.skinTypes?.map((value) => normalizeQuizText(value)) ?? [];
+
+  const categoryMatches =
+    normalizedCategories.length > 0
+      ? products.filter((product) => normalizedCategories.includes(normalizeQuizText(product.category)))
+      : products;
+  const pool = categoryMatches.length > 0 ? categoryMatches : products;
+  const availablePool = pool.filter((product) => product.stock > 0);
+  const rankedPool = availablePool.length > 0 ? availablePool : pool;
+
+  const rankedProducts = [...rankedPool].sort((left, right) => {
+    const getScore = (product: Product) => {
+      let score = 0;
+      const productConcerns = product.concerns.map((value) => normalizeQuizText(value));
+      const productSkinTypes = product.skinTypes.map((value) => normalizeQuizText(value));
+
+      score += normalizedCategories.includes(normalizeQuizText(product.category)) ? 12 : 0;
+      score += normalizedConcerns.reduce(
+        (total, concern) => total + (productConcerns.includes(concern) ? 5 : 0),
+        0,
+      );
+      score += normalizedSkinTypes.reduce((total, skinType) => {
+        return total + (productSkinTypes.includes(skinType) || productSkinTypes.includes("todas") ? 3 : 0);
+      }, 0);
+      score += product.stock > 0 ? 2 : 0;
+      score += options.preferBestSeller && product.bestSeller ? 2 : 0;
+      score += options.preferFeatured && product.featured ? 1 : 0;
+      score += Math.round(product.rating * 10);
+      return score;
+    };
+
+    return getScore(right) - getScore(left);
+  });
+
+  return rankedProducts[0] ?? fallback;
 }
 
 function getCollectionHref(goal: SkinQuizGoal) {
@@ -249,10 +337,6 @@ function dedupeRoutineSteps(steps: CandidateStep[]) {
     seen.add(key);
     return true;
   });
-}
-
-function pickProduct(product: Product | undefined, fallback: Product) {
-  return product ?? fallback;
 }
 
 function getRecommendedLimit(timeCommitment: SkinQuizCommitment) {
@@ -410,26 +494,89 @@ export function calculateSkinQuizResult(answers: SkinQuizAnswers, products: Prod
     throw new Error("Skin quiz requires at least one product in the catalog.");
   }
 
-  const productMap = getProductMap(products);
   const firstProduct = products[0];
-
-  const cleanser = pickProduct(productMap.get("prod-002"), firstProduct);
-  const renewalSerum = pickProduct(productMap.get("prod-001"), cleanser);
-  const richMoisturizer = pickProduct(productMap.get("prod-003"), renewalSerum);
-  const sunscreen = pickProduct(productMap.get("prod-004"), richMoisturizer);
-  const darkSpotTreatment = pickProduct(productMap.get("prod-005"), renewalSerum);
-  const hydratingEssence = pickProduct(productMap.get("prod-006"), richMoisturizer);
-  const acneTreatment = pickProduct(productMap.get("prod-007"), renewalSerum);
 
   const isSensitive =
     answers.skinType === "sensible" ||
     answers.sensitivity === "muy_sensible" ||
     answers.sensitivity === "se_irrita_facil";
+  const preferredSkinTypes = getPreferredSkinTypes(answers, isSensitive);
   const needsRichMoisture =
     answers.skinType === "seca" ||
     answers.ageRange === "35_44" ||
     answers.ageRange === "45_plus" ||
     answers.goal === "lineas_expresion";
+
+  const cleanser = selectCatalogProduct(
+    products,
+    {
+      categories: ["Limpiadores"],
+      concerns: isSensitive ? ["Sensibilidad", "Deshidratacion"] : answers.goal === "acne" ? ["Acne"] : [],
+      skinTypes: preferredSkinTypes,
+      preferFeatured: true,
+    },
+    firstProduct,
+  );
+  const renewalSerum = selectCatalogProduct(
+    products,
+    {
+      categories: ["Serums", "Tratamientos"],
+      concerns: ["Firmeza", "Lineas finas", "Luminosidad", "Textura"],
+      skinTypes: preferredSkinTypes,
+      preferFeatured: true,
+    },
+    cleanser,
+  );
+  const richMoisturizer = selectCatalogProduct(
+    products,
+    {
+      categories: ["Hidratantes"],
+      concerns: ["Deshidratacion", "Firmeza"],
+      skinTypes: preferredSkinTypes,
+      preferBestSeller: true,
+    },
+    renewalSerum,
+  );
+  const sunscreen = selectCatalogProduct(
+    products,
+    {
+      categories: ["Protector Solar"],
+      concerns: ["Manchas", "Fotoenvejecimiento"],
+      skinTypes: preferredSkinTypes,
+      preferBestSeller: true,
+    },
+    richMoisturizer,
+  );
+  const darkSpotTreatment = selectCatalogProduct(
+    products,
+    {
+      categories: ["Tratamientos", "Serums"],
+      concerns: ["Manchas", "Textura", "Luminosidad"],
+      skinTypes: preferredSkinTypes,
+      preferFeatured: true,
+    },
+    renewalSerum,
+  );
+  const hydratingEssence = selectCatalogProduct(
+    products,
+    {
+      categories: ["Hidratantes"],
+      concerns: ["Deshidratacion", "Opacidad", "Sensibilidad"],
+      skinTypes: preferredSkinTypes,
+      preferFeatured: true,
+    },
+    richMoisturizer,
+  );
+  const acneTreatment = selectCatalogProduct(
+    products,
+    {
+      categories: ["Tratamientos", "Serums"],
+      concerns: ["Acne", "Poros", "Textura"],
+      skinTypes: preferredSkinTypes,
+      preferFeatured: true,
+    },
+    renewalSerum,
+  );
 
   const moisturizer = needsRichMoisture ? richMoisturizer : hydratingEssence;
   const dailyTreatment =

@@ -28,7 +28,7 @@ import {
   type SkinQuizResult as SkinQuizResultValue,
 } from "@/lib/skin-quiz";
 import type { SkinQuizLeadValues } from "@/schemas/skin-quiz-lead";
-import { products } from "@/lib/site-data";
+import type { Product } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useSkinQuizStore } from "@/store/skin-quiz-store";
 import { useCartStore } from "@/store/cart-store";
@@ -37,7 +37,11 @@ type DismissReason = "now_later" | "close";
 
 const dismissWindowInDays = getSkinQuizDismissedWindow() / (24 * 60 * 60 * 1000);
 
-export function SkinQuizModal() {
+type SkinQuizModalProps = {
+  catalogProducts: Product[];
+};
+
+export function SkinQuizModal({ catalogProducts }: SkinQuizModalProps) {
   const pathname = usePathname();
   const addItem = useCartStore((state) => state.addItem);
   const close = useSkinQuizStore((state) => state.close);
@@ -215,7 +219,7 @@ export function SkinQuizModal() {
 
     if (stepIndex === skinQuizQuestions.length - 1) {
       const completedAnswers = nextAnswers as SkinQuizAnswers;
-      const nextResult = calculateSkinQuizResult(completedAnswers, products);
+      const nextResult = calculateSkinQuizResult(completedAnswers, catalogProducts);
       const savedLead = readStoredSkinQuizLead();
       setPendingResult(nextResult);
       setStoredLead(savedLead);
@@ -360,7 +364,7 @@ export function SkinQuizModal() {
                 {result
                   ? "Tu recomendacion usa productos reales del catalogo actual y se adapta a tiempo, sensibilidad y objetivo principal."
                   : isLeadStepActive
-                    ? "Comparte a donde enviarte la rutina o continua sin dejar tus datos. El flujo sigue siendo 100% frontend."
+                    ? "Comparte a donde enviarte la rutina o continua sin dejar tus datos. La recomendacion no se bloquea si el lead no se sincroniza."
                     : "Una pregunta por pantalla, sin saturacion. Buscamos una rutina facil de seguir y alineada con tu objetivo."}
               </p>
             </div>
@@ -453,7 +457,7 @@ export function SkinQuizModal() {
 
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm text-stone-500">
-                  {stepIndex > 0 ? "Puedes volver y ajustar la respuesta anterior." : "Tus respuestas viven solo en el frontend por ahora."}
+                  {stepIndex > 0 ? "Puedes volver y ajustar la respuesta anterior." : "La rutina se calcula con el catalogo disponible en este momento."}
                 </div>
                 <div className="flex gap-3">
                   {stepIndex > 0 ? (

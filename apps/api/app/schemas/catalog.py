@@ -27,6 +27,11 @@ class BrandWrite(BaseModel):
     description: str | None = None
 
 
+class ProductFaqEntry(BaseModel):
+    question: str
+    answer: str
+
+
 class ProductRead(BaseModel):
     id: int
     name: str
@@ -34,17 +39,32 @@ class ProductRead(BaseModel):
     sku: str
     brand_id: int
     brand_name: str
+    brand: str
     category_id: int
     category_name: str
+    category: str
     price: float
     discount_price: float | None = None
+    compareAtPrice: float | None = None
+    image: str | None = None
+    images: list[str] = Field(default_factory=list)
+    rating: float = 0
+    reviewCount: int = 0
+    badges: list[str] = Field(default_factory=list)
     stock: int
     description: str
     benefits: list[str]
     ingredients: list[str]
     usage: list[str]
     skin_type: list[str]
+    skinTypes: list[str] = Field(default_factory=list)
     concern: list[str]
+    concerns: list[str] = Field(default_factory=list)
+    highlight: str | None = None
+    gradient: str | None = None
+    featured: bool = False
+    bestSeller: bool = False
+    faq: list[ProductFaqEntry] = Field(default_factory=list)
     is_active: bool
 
 
@@ -66,4 +86,3 @@ class ProductWrite(BaseModel):
     skin_type: list[str] = Field(default_factory=list)
     concern: list[str] = Field(default_factory=list)
     is_active: bool = True
-

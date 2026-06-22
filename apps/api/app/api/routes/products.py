@@ -1,9 +1,18 @@
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.schemas.catalog import ProductRead
-from app.services.mock_store import get_product, list_products
+from app.services.mock_store import get_product, get_product_by_slug, list_products
+from app.services.storefront_catalog import serialize_product
 
 router = APIRouter(prefix="/products")
+
+
+def _normalize(value: str) -> str:
+    return value.strip().lower()
+
+
+def _slugify(value: str) -> str:
+    return "-".join(value.strip().lower().split())
 
 
 @router.get("", response_model=list[ProductRead])
@@ -19,25 +28,36 @@ def get_products(
     items = list_products()
 
     def matches(product: dict) -> bool:
+        serialized = serialize_product(product)
+        raw_price = serialized["price"]
+        brand_name = serialized["brand_name"]
+        category_name = serialized["category_name"]
+        category_slug = _slugify(category_name)
+        skin_types = serialized["skinTypes"]
+        concerns = serialized["concerns"]
+
         return all(
             [
-                brand is None or product["brand_name"].lower() == brand.lower(),
-                category is None or product["category_name"].lower() == category.lower(),
-                min_price is None or product["price"] >= min_price,
-                max_price is None or product["price"] <= max_price,
-                skin_type is None or skin_type in product["skin_type"],
-                concern is None or concern in product["concern"],
-                available is None or (product["stock"] > 0) == available,
+                brand is None or _normalize(brand_name) == _normalize(brand) or _slugify(brand_name) == _slugify(brand),
+                category is None
+                or _normalize(category_name) == _normalize(category)
+                or category_slug == _slugify(category),
+                min_price is None or raw_price >= min_price,
+                max_price is None or raw_price <= max_price,
+                skin_type is None or any(_normalize(entry) == _normalize(skin_type) for entry in skin_types),
+                concern is None or any(_normalize(entry) == _normalize(concern) for entry in concerns),
+                available is None or (serialized["stock"] > 0) == available,
             ]
         )
 
-    return [ProductRead.model_validate(product) for product in items if matches(product)]
+    return [ProductRead.model_validate(serialize_product(product)) for product in items if matches(product)]
 
 
-@router.get("/{product_id}", response_model=ProductRead)
-def get_product_detail(product_id: int) -> ProductRead:
-    product = get_product(product_id)
+@router.get("/{product_ref}", response_model=ProductRead)
+def get_product_detail(product_ref: str) -> ProductRead:
+    product = get_product(int(product_ref)) if product_ref.isdigit() else None
+    if not product:
+        product = get_product_by_slug(product_ref)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
-    return ProductRead.model_validate(product)
-
+    return ProductRead.model_validate(serialize_product(product))

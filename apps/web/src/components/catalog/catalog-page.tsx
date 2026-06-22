@@ -2,13 +2,13 @@
 
 import { useDeferredValue, useMemo, useState } from "react";
 
-import { useQuery } from "@tanstack/react-query";
-
 import { ProductCard } from "@/components/store/product-card";
-import { categories, products } from "@/lib/site-data";
+import type { Category, Product } from "@/lib/types";
 
 type CatalogPageProps = {
+  categories: Category[];
   initialCategory?: string;
+  initialProducts: Product[];
   initialSearch?: string;
   initialConcern?: string;
 };
@@ -21,7 +21,9 @@ type SortOption =
   | "featured";
 
 export function CatalogPage({
+  categories,
   initialCategory = "all",
+  initialProducts,
   initialSearch = "",
   initialConcern = "all",
 }: CatalogPageProps) {
@@ -39,13 +41,9 @@ export function CatalogPage({
   const deferredSort = useDeferredValue(sortBy);
   const deferredSearch = useDeferredValue(searchTerm.trim().toLowerCase());
 
-  const { data = [] } = useQuery({
-    queryKey: ["catalog-products"],
-    queryFn: async () => products,
-  });
-
-  const concerns = Array.from(new Set(products.flatMap((product) => product.concerns)));
-  const skinTypes = Array.from(new Set(products.flatMap((product) => product.skinTypes)));
+  const data = initialProducts;
+  const concerns = Array.from(new Set(data.flatMap((product) => product.concerns)));
+  const skinTypes = Array.from(new Set(data.flatMap((product) => product.skinTypes)));
 
   const filteredProducts = useMemo(() => {
     const catalog = data.filter((product) => {
@@ -99,6 +97,7 @@ export function CatalogPage({
       }
     });
   }, [
+    categories,
     data,
     deferredAvailability,
     deferredCategory,
@@ -219,11 +218,23 @@ export function CatalogPage({
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {filteredProducts.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {filteredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="soft-panel rounded-[1.8rem] p-8 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">
+              Sin resultados
+            </p>
+            <h3 className="mt-3 font-serif text-3xl text-stone-900">No encontramos productos con esos filtros</h3>
+            <p className="mt-3 text-sm leading-7 text-stone-600">
+              Ajusta categoria, problema o busqueda para ver una seleccion mas amplia del catalogo.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

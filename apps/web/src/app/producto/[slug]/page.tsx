@@ -6,7 +6,7 @@ import { AddToCartButton } from "@/components/store/add-to-cart-button";
 import { ProductCard } from "@/components/store/product-card";
 import { ProductViewTracker } from "@/components/store/product-view-tracker";
 import { formatCurrency } from "@/lib/format";
-import { getProductBySlug, products } from "@/lib/site-data";
+import { getProductBySlug, getProducts } from "@/lib/storefront-api";
 
 type ProductDetailPageProps = {
   params: Promise<{
@@ -16,7 +16,7 @@ type ProductDetailPageProps = {
 
 export async function generateMetadata({ params }: ProductDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     return {};
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: ProductDetailPageProps): Prom
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const [product, products] = await Promise.all([getProductBySlug(slug), getProducts()]);
 
   if (!product) {
     notFound();

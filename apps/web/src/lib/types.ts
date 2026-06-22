@@ -8,6 +8,7 @@ export type Category = {
 export type Brand = {
   id: string;
   name: string;
+  slug?: string;
   description: string;
 };
 
@@ -25,6 +26,7 @@ export type Product = {
   sku: string;
   price: number;
   compareAtPrice?: number;
+  image?: string;
   stock: number;
   description: string;
   benefits: string[];
@@ -33,6 +35,7 @@ export type Product = {
   faq: ProductFaq[];
   skinTypes: string[];
   concerns: string[];
+  badges?: string[];
   images: string[];
   highlight: string;
   gradient: string;

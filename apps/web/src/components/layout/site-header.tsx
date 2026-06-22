@@ -6,6 +6,7 @@ import { SkinQuizModal } from "@/components/quiz/skin-quiz-modal";
 import { SkinQuizTrigger } from "@/components/quiz/skin-quiz-trigger";
 import { CartIcon, WhatsAppIcon } from "@/components/shared/icons";
 import { SiteSearch } from "@/components/layout/site-search";
+import type { Product } from "@/lib/types";
 import { useCartStore } from "@/store/cart-store";
 
 const navItems = [
@@ -17,14 +18,18 @@ const navItems = [
   { href: "/cuenta", label: "Cuenta" },
 ];
 
-export function SiteHeader() {
+type SiteHeaderProps = {
+  catalogProducts: Product[];
+};
+
+export function SiteHeader({ catalogProducts }: SiteHeaderProps) {
   const itemCount = useCartStore((state) =>
     state.items.reduce((sum, item) => sum + item.quantity, 0),
   );
 
   return (
     <>
-      <SkinQuizModal />
+      <SkinQuizModal catalogProducts={catalogProducts} />
       <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-white/95 backdrop-blur">
         <div className="border-b border-stone-200/70 bg-[#f7efe8]">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-2 text-[11px] uppercase tracking-[0.24em] text-stone-600 sm:px-6 lg:px-8">

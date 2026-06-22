@@ -7,12 +7,10 @@ import { SectionHeading } from "@/components/shared/section-heading";
 import { RatingStars } from "@/components/shared/rating-stars";
 import { NeedCardLink } from "@/components/store/need-card-link";
 import { ProductCard } from "@/components/store/product-card";
+import { getBrands, getProducts } from "@/lib/storefront-api";
 import {
   benefits,
   blogPosts,
-  brands,
-  getBestSellerProducts,
-  getFeaturedProducts,
   shopNeeds,
   testimonials,
 } from "@/lib/site-data";
@@ -66,9 +64,12 @@ const organizationJsonLd = {
   ],
 };
 
-export default function HomePage() {
-  const featured = getFeaturedProducts().slice(0, 4);
-  const bestSellers = getBestSellerProducts().slice(0, 3);
+export default async function HomePage() {
+  const [catalogProducts, storefrontBrands] = await Promise.all([getProducts(), getBrands()]);
+  const featuredSelection = catalogProducts.filter((product) => product.featured).slice(0, 4);
+  const bestSellerSelection = catalogProducts.filter((product) => product.bestSeller).slice(0, 3);
+  const featured = featuredSelection.length > 0 ? featuredSelection : catalogProducts.slice(0, 4);
+  const bestSellers = bestSellerSelection.length > 0 ? bestSellerSelection : catalogProducts.slice(0, 3);
   const featuredPost = blogPosts[0];
   const secondaryPosts = blogPosts.slice(1);
 
@@ -209,7 +210,7 @@ export default function HomePage() {
               <h2 className="mt-2 font-serif text-3xl text-stone-900">Curaduria de alto desempeno sin ruido visual</h2>
             </div>
             <div className="flex flex-wrap gap-2">
-              {brands.map((brand) => (
+              {storefrontBrands.map((brand) => (
                 <span
                   className="rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-sm text-stone-700"
                   key={brand.id}
