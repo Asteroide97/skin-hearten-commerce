@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { SkinQuizTrigger } from "@/components/quiz/skin-quiz-trigger";
 import { ArrowUpRightIcon, CheckCircleIcon } from "@/components/shared/icons";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { RatingStars } from "@/components/shared/rating-stars";
@@ -95,13 +96,19 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link
                   className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-stone-950 transition hover:bg-stone-100"
                   href="#shop-needs"
                 >
                   Comprar por necesidad
                 </Link>
+                <SkinQuizTrigger
+                  className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/8 px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/12"
+                  source="home"
+                >
+                  Encontrar mi rutina
+                </SkinQuizTrigger>
                 <Link
                   className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/40"
                   href="#bestsellers"

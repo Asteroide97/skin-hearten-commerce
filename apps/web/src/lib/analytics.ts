@@ -6,6 +6,8 @@ export type NeedAnalyticsValue =
   | "piel_sensible"
   | "protector_solar";
 
+export type SkinQuizAnalyticsSource = "auto_home" | "header" | "home";
+
 export type AnalyticsEventMap = {
   product_view: {
     product_id: string;
@@ -34,6 +36,39 @@ export type AnalyticsEventMap = {
     payment_method: "mercadopago" | "paypal" | "stripe";
     cart_total: number;
     item_count: number;
+  };
+  skin_quiz_opened: {
+    source: SkinQuizAnalyticsSource;
+    has_saved_result: boolean;
+  };
+  skin_quiz_started: {
+    source: SkinQuizAnalyticsSource;
+  };
+  skin_quiz_step_answered: {
+    step_id: "skinType" | "goal" | "ageRange" | "frequency" | "sensitivity" | "timeCommitment";
+    answer: string;
+    step_number: number;
+  };
+  skin_quiz_completed: {
+    goal:
+      | "manchas"
+      | "acne"
+      | "lineas_expresion"
+      | "hidratacion"
+      | "luminosidad"
+      | "proteccion_solar";
+    skin_type: "seca" | "mixta" | "grasa" | "sensible" | "no_segura";
+    recommended_product_ids: string[];
+  };
+  skin_quiz_dismissed: {
+    source: SkinQuizAnalyticsSource;
+    reason: "now_later" | "close";
+    reopen_after_days: number;
+  };
+  skin_quiz_add_routine_to_cart: {
+    product_ids: string[];
+    item_count: number;
+    cart_total: number;
   };
 };
 
