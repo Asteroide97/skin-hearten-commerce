@@ -1,7 +1,11 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from __future__ import annotations
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+
+from app.core.deps import get_db
 from app.schemas.catalog import ProductRead
-from app.services.mock_store import get_product, get_product_by_slug, list_products
+from app.services.catalog_store import get_catalog_product, list_catalog_products
 from app.services.storefront_catalog import serialize_product
 
 router = APIRouter(prefix="/products")
@@ -24,8 +28,9 @@ def get_products(
     skin_type: str | None = None,
     concern: str | None = None,
     available: bool | None = None,
+    db: Session = Depends(get_db),
 ) -> list[ProductRead]:
-    items = list_products()
+    items = list_catalog_products(db)
 
     def matches(product: dict) -> bool:
         serialized = serialize_product(product)
@@ -54,10 +59,8 @@ def get_products(
 
 
 @router.get("/{product_ref}", response_model=ProductRead)
-def get_product_detail(product_ref: str) -> ProductRead:
-    product = get_product(int(product_ref)) if product_ref.isdigit() else None
-    if not product:
-        product = get_product_by_slug(product_ref)
+def get_product_detail(product_ref: str, db: Session = Depends(get_db)) -> ProductRead:
+    product = get_catalog_product(db, product_ref)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     return ProductRead.model_validate(serialize_product(product))
