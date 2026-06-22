@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     app_name: str = "Skin Hearten API"
     environment: str = "development"
     api_v1_str: str = "/api/v1"
+    api_base_url: str = ""
     frontend_url: str = "http://localhost:3000"
     backend_cors_origins: list[str] = Field(default_factory=list)
     database_url: str = "sqlite:///./skin_hearten.db"
@@ -25,6 +26,7 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     mercadopago_access_token: str = ""
+    mercadopago_webhook_secret: str = ""
     paypal_client_id: str = ""
     paypal_client_secret: str = ""
     azure_blob_connection_string: str = ""

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -71,7 +71,9 @@ class Payment(TimestampMixin, Base):
     provider_reference: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[PaymentStatus] = mapped_column(Enum(PaymentStatus), default=PaymentStatus.PENDING)
     amount: Mapped[float] = mapped_column(Numeric(10, 2))
+    raw_payload_json: Mapped[dict | None] = mapped_column(JSON)
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Coupon(TimestampMixin, Base):

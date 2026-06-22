@@ -11,7 +11,7 @@ export const checkoutSchema = z.object({
   state: z.string().min(2, "Ingresa tu estado"),
   postalCode: z.string().min(5, "Ingresa tu codigo postal"),
   country: z.string().min(2, "Ingresa tu pais"),
-  paymentMethod: z.enum(["mercadopago", "paypal", "stripe"]),
+  paymentMethod: z.enum(["mercadopago", "stripe"]),
 });
 
 export type CheckoutValues = z.infer<typeof checkoutSchema>;

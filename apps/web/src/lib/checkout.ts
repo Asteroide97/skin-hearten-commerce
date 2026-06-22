@@ -1,8 +1,9 @@
 import type { CartItem } from "@/store/cart-store";
 
 export const LAST_CHECKOUT_ORDER_STORAGE_KEY = "skin-hearten.last-checkout-order";
+export const CHECKOUT_SUCCESS_TRACKING_KEY = "skin-hearten.checkout-success-tracked";
 
-export type CheckoutPaymentMethod = "mercadopago" | "paypal" | "stripe";
+export type CheckoutPaymentMethod = "mercadopago" | "paypal" | "stripe" | "mock";
 
 export type CheckoutCustomerPayload = {
   firstName: string;
@@ -36,6 +37,18 @@ export type CheckoutRequestPayload = {
   paymentMethod: CheckoutPaymentMethod;
 };
 
+export type CheckoutNextAction =
+  | {
+      type: "redirect";
+      provider: "mercadopago" | "stripe";
+      url: string;
+    }
+  | {
+      type: "show_order_confirmation";
+      provider?: string;
+      url?: string | null;
+    };
+
 export type CheckoutOrderSummary = {
   orderId: number;
   orderNumber: string;
@@ -45,12 +58,12 @@ export type CheckoutOrderSummary = {
   discount: number;
   shipping: number;
   total: number;
-  nextAction: string;
+  nextAction: CheckoutNextAction;
 };
 
 export type StoredCheckoutOrder = CheckoutOrderSummary & {
-  customerName: string;
   createdAt: string;
+  customerName: string;
 };
 
 type CheckoutResult =
@@ -74,6 +87,24 @@ function getLocalStorage() {
   return window.localStorage;
 }
 
+function isCheckoutNextAction(value: unknown): value is CheckoutNextAction {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (candidate.type === "show_order_confirmation") {
+    return true;
+  }
+
+  return (
+    candidate.type === "redirect" &&
+    (candidate.provider === "mercadopago" || candidate.provider === "stripe") &&
+    typeof candidate.url === "string" &&
+    candidate.url.length > 0
+  );
+}
+
 function isCheckoutOrderSummary(value: unknown): value is CheckoutOrderSummary {
   if (!value || typeof value !== "object") {
     return false;
@@ -89,7 +120,7 @@ function isCheckoutOrderSummary(value: unknown): value is CheckoutOrderSummary {
     typeof candidate.discount === "number" &&
     typeof candidate.shipping === "number" &&
     typeof candidate.total === "number" &&
-    typeof candidate.nextAction === "string"
+    isCheckoutNextAction(candidate.nextAction)
   );
 }
 
@@ -97,10 +128,7 @@ function buildMockCheckoutResponse(payload: CheckoutRequestPayload) {
   const subtotal = payload.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const normalizedCoupon = payload.couponCode?.trim().toUpperCase();
   const discount = normalizedCoupon === "GLOW10" ? Number((subtotal * 0.1).toFixed(2)) : 0;
-  const shipping =
-    normalizedCoupon === "ENVIOGRATIS" || subtotal >= 1999
-      ? 0
-      : 149;
+  const shipping = normalizedCoupon === "ENVIOGRATIS" || subtotal >= 1999 ? 0 : 149;
   const total = Number((subtotal - discount + shipping).toFixed(2));
   const createdSeed = Date.now();
   const isMockPaid = payload.paymentMethod === "stripe";
@@ -114,7 +142,10 @@ function buildMockCheckoutResponse(payload: CheckoutRequestPayload) {
     discount,
     shipping,
     total,
-    nextAction: "show_order_confirmation",
+    nextAction: {
+      type: "show_order_confirmation",
+      provider: "mock",
+    },
   } satisfies CheckoutOrderSummary;
 }
 
@@ -209,6 +240,22 @@ export function saveLastCheckoutOrder(order: StoredCheckoutOrder) {
   storage.setItem(LAST_CHECKOUT_ORDER_STORAGE_KEY, JSON.stringify(order));
 }
 
+export function updateLastCheckoutOrder(patch: Partial<StoredCheckoutOrder>) {
+  const storage = getLocalStorage();
+  if (!storage) {
+    return null;
+  }
+
+  const current = readLastCheckoutOrder();
+  if (!current) {
+    return null;
+  }
+
+  const nextValue = { ...current, ...patch };
+  storage.setItem(LAST_CHECKOUT_ORDER_STORAGE_KEY, JSON.stringify(nextValue));
+  return nextValue;
+}
+
 export function readLastCheckoutOrder() {
   const storage = getLocalStorage();
   if (!storage) {
@@ -222,11 +269,38 @@ export function readLastCheckoutOrder() {
 
   try {
     const parsed = JSON.parse(rawValue) as StoredCheckoutOrder;
-    return parsed;
+    if (
+      isCheckoutOrderSummary(parsed) &&
+      typeof parsed.customerName === "string" &&
+      typeof parsed.createdAt === "string"
+    ) {
+      return parsed;
+    }
+
+    storage.removeItem(LAST_CHECKOUT_ORDER_STORAGE_KEY);
+    return null;
   } catch {
     storage.removeItem(LAST_CHECKOUT_ORDER_STORAGE_KEY);
     return null;
   }
+}
+
+export function markCheckoutSuccessTracked(orderId: number) {
+  const storage = getLocalStorage();
+  if (!storage) {
+    return;
+  }
+
+  storage.setItem(CHECKOUT_SUCCESS_TRACKING_KEY, String(orderId));
+}
+
+export function hasCheckoutSuccessBeenTracked(orderId: number) {
+  const storage = getLocalStorage();
+  if (!storage) {
+    return false;
+  }
+
+  return storage.getItem(CHECKOUT_SUCCESS_TRACKING_KEY) === String(orderId);
 }
 
 export function buildCheckoutIdempotencyKey() {

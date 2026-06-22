@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.schemas.checkout import CheckoutRequest, CheckoutResponse
-from app.services.checkout import create_mock_checkout_order
+from app.services.checkout import create_checkout_order
 
 router = APIRouter(prefix="/checkout")
 
@@ -14,4 +14,4 @@ def create_checkout(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> CheckoutResponse:
-    return create_mock_checkout_order(db, payload, idempotency_key=idempotency_key)
+    return create_checkout_order(db, payload, idempotency_key=idempotency_key)

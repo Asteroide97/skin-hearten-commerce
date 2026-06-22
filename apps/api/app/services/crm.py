@@ -632,6 +632,49 @@ def upsert_contact_from_checkout(
         return _serialize_contact_summary(contact)
 
 
+def record_order_paid_event(
+    db: Session,
+    *,
+    customer_email: str | None,
+    customer_phone: str | None,
+    order: dict[str, Any],
+) -> dict[str, Any] | None:
+    event_payload = {
+        "order_id": order.get("id"),
+        "order_number": order.get("order_number"),
+        "total": float(order.get("grand_total") or 0),
+        "payment_provider": order.get("payment_provider"),
+        "payment_status": "paid",
+        "item_count": sum(int(item.get("quantity") or 0) for item in order.get("items", [])),
+    }
+
+    try:
+        _ensure_crm_tables()
+        contact = _find_db_contact(db, email=customer_email, whatsapp=customer_phone)
+        if contact:
+            return _safe_record_event(
+                db,
+                contact_id=contact.id,
+                event_type="order_paid",
+                payload_json=event_payload,
+                source="payments",
+            )
+    except SQLAlchemyError:
+        db.rollback()
+
+    contact = find_mock_crm_contact(email=customer_email, whatsapp=customer_phone)
+    if contact:
+        return _record_crm_event_fallback(
+            contact_id=contact["id"],
+            anonymous_id=None,
+            event_type="order_paid",
+            payload_json=event_payload,
+            source="payments",
+        )
+
+    return None
+
+
 def create_task(
     db: Session,
     *,

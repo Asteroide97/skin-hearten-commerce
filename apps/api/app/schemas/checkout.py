@@ -34,7 +34,13 @@ class CheckoutRequest(CheckoutSchema):
     shipping_address: CheckoutShippingAddressInput = Field(alias="shippingAddress")
     items: list[CheckoutItemInput] = Field(min_length=1)
     coupon_code: str | None = Field(default=None, alias="couponCode")
-    payment_method: str = Field(alias="paymentMethod", pattern="^(mercadopago|paypal|stripe)$")
+    payment_method: str = Field(alias="paymentMethod", pattern="^(mercadopago|paypal|stripe|mock)$")
+
+
+class CheckoutNextAction(BaseModel):
+    type: str
+    provider: str | None = None
+    url: str | None = None
 
 
 class CheckoutResponse(BaseModel):
@@ -46,4 +52,4 @@ class CheckoutResponse(BaseModel):
     discount: float
     shipping: float
     total: float
-    next_action: str = Field(serialization_alias="nextAction")
+    next_action: CheckoutNextAction = Field(serialization_alias="nextAction")

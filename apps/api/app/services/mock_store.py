@@ -388,8 +388,10 @@ PAYMENTS = [
         "provider_reference": "mer_demo_001",
         "status": "paid",
         "amount": 1129.0,
+        "raw_payload_json": {},
         "created_at": datetime.now(timezone.utc),
         "paid_at": datetime.now(timezone.utc),
+        "failed_at": None,
     }
 ]
 
@@ -541,6 +543,10 @@ def get_order_by_id(order_id: int) -> dict | None:
     return next((deepcopy(order) for order in ORDERS if order["id"] == order_id), None)
 
 
+def get_order_by_number(order_number: str) -> dict | None:
+    return next((deepcopy(order) for order in ORDERS if order["order_number"] == order_number), None)
+
+
 def get_next_order_id() -> int:
     return max(entry["id"] for entry in ORDERS) + 1 if ORDERS else 1
 
@@ -562,6 +568,15 @@ def update_order_status(order_id: int, status: str) -> dict | None:
     return deepcopy(order)
 
 
+def update_order(order_id: int, payload: dict) -> dict | None:
+    order = next((entry for entry in ORDERS if entry["id"] == order_id), None)
+    if not order:
+        return None
+
+    order.update(payload)
+    return deepcopy(order)
+
+
 def create_payment(payload: dict) -> dict:
     next_id = max(payment["id"] for payment in PAYMENTS) + 1 if PAYMENTS else 1
     payment = {
@@ -570,6 +585,27 @@ def create_payment(payload: dict) -> dict:
         **payload,
     }
     PAYMENTS.append(payment)
+    return deepcopy(payment)
+
+
+def get_payment_by_provider_reference(provider: str, provider_reference: str) -> dict | None:
+    payment = next(
+        (
+            entry
+            for entry in PAYMENTS
+            if entry.get("provider") == provider and entry.get("provider_reference") == provider_reference
+        ),
+        None,
+    )
+    return deepcopy(payment) if payment else None
+
+
+def update_payment(payment_id: int, payload: dict) -> dict | None:
+    payment = next((entry for entry in PAYMENTS if entry["id"] == payment_id), None)
+    if not payment:
+        return None
+
+    payment.update(payload)
     return deepcopy(payment)
 
 

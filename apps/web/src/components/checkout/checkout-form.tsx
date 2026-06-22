@@ -26,7 +26,6 @@ import {
 
 const paymentMethods = [
   { id: "mercadopago", label: "Mercado Pago" },
-  { id: "paypal", label: "PayPal" },
   { id: "stripe", label: "Stripe" },
 ] as const;
 
@@ -104,6 +103,13 @@ export function CheckoutForm() {
       customerName: `${values.firstName} ${values.lastName}`.trim(),
       createdAt: new Date().toISOString(),
     });
+
+    if (result.data.nextAction.type === "redirect") {
+      idempotencyKeyRef.current = null;
+      window.location.assign(result.data.nextAction.url);
+      return;
+    }
+
     clearCart();
     trackEvent("checkout_completed", {
       order_id: result.data.orderId,
@@ -167,7 +173,7 @@ export function CheckoutForm() {
 
         <fieldset className="space-y-3">
           <legend className="text-sm font-semibold text-stone-900">Metodo de pago</legend>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {paymentMethods.map((method) => (
               <label
                 className="flex cursor-pointer items-center gap-3 rounded-[1.2rem] border border-stone-200 bg-white px-4 py-4"
