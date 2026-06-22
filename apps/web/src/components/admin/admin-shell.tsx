@@ -9,6 +9,7 @@ const sections = [
   { href: "/admin/pedidos", label: "Pedidos" },
   { href: "/admin/clientes", label: "Clientes" },
   { href: "/admin/crm", label: "CRM" },
+  { href: "/admin/crm/automations", label: "Automatizaciones" },
   { href: "/admin/skin-quiz-analytics", label: "Skin Quiz Analytics" },
   { href: "/admin/skin-quiz-leads", label: "Skin Quiz Leads" },
 ];

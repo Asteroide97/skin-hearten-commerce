@@ -6,7 +6,13 @@ from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, Strin
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
-from app.models.enums import CRMLifecycleStatus, CRMTaskStatus, CRMTaskType
+from app.models.enums import (
+    CRMAutomationRunStatus,
+    CRMAutomationTriggerType,
+    CRMLifecycleStatus,
+    CRMTaskStatus,
+    CRMTaskType,
+)
 from app.models.mixins import TimestampMixin
 
 
@@ -73,3 +79,36 @@ class CRMTask(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class CRMAutomationRule(TimestampMixin, Base):
+    __tablename__ = "crm_automation_rules"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(160), unique=True, index=True)
+    trigger_type: Mapped[CRMAutomationTriggerType] = mapped_column(Enum(CRMAutomationTriggerType))
+    delay_hours: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    task_type: Mapped[CRMTaskType] = mapped_column(
+        Enum(CRMTaskType),
+        default=CRMTaskType.FOLLOW_UP,
+        server_default=CRMTaskType.FOLLOW_UP.value,
+    )
+    task_title_template: Mapped[str] = mapped_column(String(255))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+
+
+class CRMAutomationRun(Base):
+    __tablename__ = "crm_automation_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    rule_id: Mapped[int] = mapped_column(ForeignKey("crm_automation_rules.id"))
+    contact_id: Mapped[int] = mapped_column(ForeignKey("crm_contacts.id"))
+    source_event_id: Mapped[int | None] = mapped_column(ForeignKey("crm_events.id"), nullable=True)
+    status: Mapped[CRMAutomationRunStatus] = mapped_column(
+        Enum(CRMAutomationRunStatus),
+        default=CRMAutomationRunStatus.PENDING,
+        server_default=CRMAutomationRunStatus.PENDING.value,
+    )
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error_message: Mapped[str | None] = mapped_column(Text())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -411,6 +411,8 @@ CRM_CONTACTS: list[dict] = []
 CRM_EVENTS: list[dict] = []
 CRM_NOTES: list[dict] = []
 CRM_TASKS: list[dict] = []
+CRM_AUTOMATION_RULES: list[dict] = []
+CRM_AUTOMATION_RUNS: list[dict] = []
 
 
 def list_products() -> list[dict]:
@@ -808,6 +810,96 @@ def update_crm_task(task_id: int, payload: dict) -> dict | None:
 
     task.update(payload)
     return deepcopy(task)
+
+
+def list_crm_automation_rules() -> list[dict]:
+    return sorted(
+        [deepcopy(rule) for rule in CRM_AUTOMATION_RULES],
+        key=lambda rule: rule.get("created_at") or datetime.now(timezone.utc),
+    )
+
+
+def get_crm_automation_rule(rule_id: int) -> dict | None:
+    rule = next((entry for entry in CRM_AUTOMATION_RULES if entry["id"] == rule_id), None)
+    if not rule:
+        return None
+    return deepcopy(rule)
+
+
+def get_crm_automation_rule_by_name(name: str) -> dict | None:
+    rule = next((entry for entry in CRM_AUTOMATION_RULES if entry["name"] == name), None)
+    if not rule:
+        return None
+    return deepcopy(rule)
+
+
+def create_crm_automation_rule(payload: dict) -> dict:
+    next_id = max(rule["id"] for rule in CRM_AUTOMATION_RULES) + 1 if CRM_AUTOMATION_RULES else 1
+    now = datetime.now(timezone.utc)
+    rule = {
+        "id": next_id,
+        "created_at": now,
+        "updated_at": now,
+        **payload,
+    }
+    CRM_AUTOMATION_RULES.append(rule)
+    return deepcopy(rule)
+
+
+def update_crm_automation_rule(rule_id: int, payload: dict) -> dict | None:
+    rule = next((entry for entry in CRM_AUTOMATION_RULES if entry["id"] == rule_id), None)
+    if not rule:
+        return None
+
+    for key, value in payload.items():
+        if value is not None or key == "is_active":
+            rule[key] = value
+    rule["updated_at"] = datetime.now(timezone.utc)
+    return deepcopy(rule)
+
+
+def find_crm_automation_run(
+    *,
+    contact_id: int,
+    rule_id: int,
+    source_event_id: int | None,
+) -> dict | None:
+    for run in CRM_AUTOMATION_RUNS:
+        if (
+            run["contact_id"] == contact_id
+            and run["rule_id"] == rule_id
+            and run.get("source_event_id") == source_event_id
+        ):
+            return deepcopy(run)
+    return None
+
+
+def create_crm_automation_run(payload: dict) -> dict:
+    next_id = max(run["id"] for run in CRM_AUTOMATION_RUNS) + 1 if CRM_AUTOMATION_RUNS else 1
+    run = {
+        "id": next_id,
+        "created_at": datetime.now(timezone.utc),
+        "executed_at": payload.get("executed_at"),
+        "error_message": payload.get("error_message"),
+        **payload,
+    }
+    CRM_AUTOMATION_RUNS.append(run)
+    return deepcopy(run)
+
+
+def update_crm_automation_run(run_id: int, payload: dict) -> dict | None:
+    run = next((entry for entry in CRM_AUTOMATION_RUNS if entry["id"] == run_id), None)
+    if not run:
+        return None
+
+    run.update(payload)
+    return deepcopy(run)
+
+
+def list_crm_automation_runs(limit: int | None = None) -> list[dict]:
+    runs = [deepcopy(run) for run in CRM_AUTOMATION_RUNS]
+    runs.sort(key=lambda run: run["created_at"], reverse=True)
+    return runs[:limit] if limit is not None else runs
 
 
 def create_product(payload: dict) -> dict:

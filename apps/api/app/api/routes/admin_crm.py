@@ -6,6 +6,9 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_admin
 from app.db.session import get_db
 from app.schemas.crm import (
+    CRMAutomationRuleRead,
+    CRMAutomationRuleUpdate,
+    CRMAutomationRunRead,
     CRMContactDetailRead,
     CRMContactSummaryRead,
     CRMContactUpdate,
@@ -15,6 +18,11 @@ from app.schemas.crm import (
     CRMTaskCreate,
     CRMTaskRead,
     CRMTaskUpdate,
+)
+from app.services.crm_automations import (
+    list_crm_automation_rules,
+    list_crm_automation_runs,
+    update_crm_automation_rule_entry,
 )
 from app.services.crm import (
     create_crm_note_entry,
@@ -129,3 +137,35 @@ def update_admin_crm_task(
     if not task:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="CRM task not found")
     return CRMTaskRead.model_validate(task)
+
+
+@router.get("/automations/rules", response_model=list[CRMAutomationRuleRead])
+def list_admin_crm_automation_rules(
+    _: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> list[CRMAutomationRuleRead]:
+    rules = list_crm_automation_rules(db)
+    return [CRMAutomationRuleRead.model_validate(rule) for rule in rules]
+
+
+@router.patch("/automations/rules/{rule_id}", response_model=CRMAutomationRuleRead)
+def update_admin_crm_automation_rule(
+    rule_id: int,
+    payload: CRMAutomationRuleUpdate,
+    _: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> CRMAutomationRuleRead:
+    rule = update_crm_automation_rule_entry(db, rule_id, payload)
+    if not rule:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="CRM automation rule not found")
+    return CRMAutomationRuleRead.model_validate(rule)
+
+
+@router.get("/automations/runs", response_model=list[CRMAutomationRunRead])
+def list_admin_crm_automation_runs(
+    limit: int = Query(default=50, ge=1, le=200),
+    _: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> list[CRMAutomationRunRead]:
+    runs = list_crm_automation_runs(db, limit=limit)
+    return [CRMAutomationRunRead.model_validate(run) for run in runs]

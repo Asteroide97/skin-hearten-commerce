@@ -344,16 +344,31 @@ def record_crm_event(
 
         db.commit()
         db.refresh(event)
-        return _event_to_dict(event)
+        event_data = _event_to_dict(event)
+        try:
+            from app.services.crm_automations import evaluate_automations_for_event
+
+            evaluate_automations_for_event(db, event_data)
+        except Exception:
+            db.rollback()
+
+        return event_data
     except SQLAlchemyError:
         db.rollback()
-        return _record_crm_event_fallback(
+        event_data = _record_crm_event_fallback(
             contact_id=contact_id,
             anonymous_id=anonymous_id,
             event_type=event_type,
             payload_json=payload_data,
             source=source,
         )
+        try:
+            from app.services.crm_automations import evaluate_automations_for_event
+
+            evaluate_automations_for_event(db, event_data)
+        except Exception:
+            db.rollback()
+        return event_data
 
 
 def _safe_record_event(

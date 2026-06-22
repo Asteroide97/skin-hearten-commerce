@@ -8,6 +8,15 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 CRMLifecycleStatus = Literal["lead", "customer", "repeat_customer", "inactive"]
 CRMTaskStatus = Literal["pending", "done", "cancelled"]
 CRMTaskType = Literal["follow_up", "abandoned_cart", "repurchase", "post_purchase", "manual"]
+CRMAutomationTriggerType = Literal[
+    "skin_quiz_completed",
+    "checkout_completed",
+    "abandoned_cart",
+    "post_purchase",
+    "repurchase_due",
+    "customer_inactive",
+]
+CRMAutomationRunStatus = Literal["pending", "executed", "skipped", "failed"]
 
 
 class CRMEventRead(BaseModel):
@@ -112,3 +121,49 @@ class CRMTaskUpdate(BaseModel):
     status: CRMTaskStatus
 
     model_config = ConfigDict(extra="forbid")
+
+
+class CRMAutomationRuleRead(BaseModel):
+    id: int
+    name: str
+    trigger_type: CRMAutomationTriggerType = Field(serialization_alias="triggerType")
+    delay_hours: int = Field(serialization_alias="delayHours")
+    task_type: CRMTaskType = Field(serialization_alias="taskType")
+    task_title_template: str = Field(serialization_alias="taskTitleTemplate")
+    is_active: bool = Field(serialization_alias="isActive")
+    created_at: datetime = Field(serialization_alias="createdAt")
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class CRMAutomationRuleUpdate(BaseModel):
+    delay_hours: int | None = Field(default=None, alias="delayHours", ge=0, le=24 * 365)
+    task_title_template: str | None = Field(default=None, alias="taskTitleTemplate", min_length=2, max_length=255)
+    is_active: bool | None = Field(default=None, alias="isActive")
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_non_empty_payload(self) -> "CRMAutomationRuleUpdate":
+        if not self.model_fields_set:
+            raise ValueError("At least one rule field must be provided")
+        return self
+
+
+class CRMAutomationRunRead(BaseModel):
+    id: int
+    rule_id: int = Field(serialization_alias="ruleId")
+    rule_name: str = Field(serialization_alias="ruleName")
+    contact_id: int = Field(serialization_alias="contactId")
+    contact_name: str = Field(serialization_alias="contactName")
+    source_event_id: int | None = Field(default=None, serialization_alias="sourceEventId")
+    trigger_type: CRMAutomationTriggerType = Field(serialization_alias="triggerType")
+    task_type: CRMTaskType = Field(serialization_alias="taskType")
+    due_at: datetime = Field(serialization_alias="dueAt")
+    status: CRMAutomationRunStatus
+    executed_at: datetime | None = Field(default=None, serialization_alias="executedAt")
+    error_message: str | None = Field(default=None, serialization_alias="errorMessage")
+    created_at: datetime = Field(serialization_alias="createdAt")
+
+    model_config = ConfigDict(populate_by_name=True)

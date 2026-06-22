@@ -1,6 +1,9 @@
 import "server-only";
 
 import type {
+  CRMAutomationRule,
+  CRMAutomationRuleUpdateInput,
+  CRMAutomationRun,
   CRMContactDetail,
   CRMContactFilters,
   CRMContactSummary,
@@ -34,6 +37,7 @@ type AdminApiResult<TData> = AdminApiSuccess<TData> | AdminApiFailure;
 
 type RequestBody =
   | CRMContactUpdateInput
+  | CRMAutomationRuleUpdateInput
   | CRMNoteCreateInput
   | CRMTaskCreateInput
   | CRMTaskUpdateInput
@@ -164,4 +168,22 @@ export async function updateAdminCrmTask(taskId: number, payload: CRMTaskUpdateI
     body: payload,
     method: "PATCH",
   });
+}
+
+export async function listAdminCrmAutomationRules() {
+  return requestAdminJson<CRMAutomationRule[]>("/admin/crm/automations/rules");
+}
+
+export async function updateAdminCrmAutomationRule(
+  ruleId: number,
+  payload: CRMAutomationRuleUpdateInput,
+) {
+  return requestAdminJson<CRMAutomationRule>(`/admin/crm/automations/rules/${ruleId}`, {
+    body: payload,
+    method: "PATCH",
+  });
+}
+
+export async function listAdminCrmAutomationRuns(limit = 50) {
+  return requestAdminJson<CRMAutomationRun[]>(`/admin/crm/automations/runs?limit=${limit}`);
 }

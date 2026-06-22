@@ -2,7 +2,7 @@ from app.models.base import Base
 from app.models.catalog import Brand, Category, Product, ProductImage
 from app.models.commerce import Cart, CartItem, Coupon, CouponUsage, InventoryMovement, Order, OrderItem, Payment
 from app.models.content import BlogPost, Setting
-from app.models.crm import CRMContact, CRMEvent, CRMNote, CRMTask
+from app.models.crm import CRMAutomationRule, CRMAutomationRun, CRMContact, CRMEvent, CRMNote, CRMTask
 from app.models.identity import Customer, CustomerAddress, Role, User
 from app.models.marketing import SkinQuizLead
 
@@ -14,6 +14,8 @@ __all__ = [
     "Category",
     "Coupon",
     "CouponUsage",
+    "CRMAutomationRule",
+    "CRMAutomationRun",
     "Customer",
     "CustomerAddress",
     "CRMContact",

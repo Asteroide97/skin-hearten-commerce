@@ -1,6 +1,14 @@
 export type CRMContactLifecycleStatus = "lead" | "customer" | "repeat_customer" | "inactive";
 export type CRMTaskStatus = "pending" | "done" | "cancelled";
 export type CRMTaskType = "follow_up" | "abandoned_cart" | "repurchase" | "post_purchase" | "manual";
+export type CRMAutomationTriggerType =
+  | "skin_quiz_completed"
+  | "checkout_completed"
+  | "abandoned_cart"
+  | "post_purchase"
+  | "repurchase_due"
+  | "customer_inactive";
+export type CRMAutomationRunStatus = "pending" | "executed" | "skipped" | "failed";
 
 export type CRMContactSummary = {
   id: number;
@@ -92,6 +100,40 @@ export type CRMTaskUpdateInput = {
   status: CRMTaskStatus;
 };
 
+export type CRMAutomationRule = {
+  id: number;
+  name: string;
+  triggerType: CRMAutomationTriggerType;
+  delayHours: number;
+  taskType: CRMTaskType;
+  taskTitleTemplate: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CRMAutomationRuleUpdateInput = {
+  delayHours?: number;
+  taskTitleTemplate?: string;
+  isActive?: boolean;
+};
+
+export type CRMAutomationRun = {
+  id: number;
+  ruleId: number;
+  ruleName: string;
+  contactId: number;
+  contactName: string;
+  sourceEventId: number | null;
+  triggerType: CRMAutomationTriggerType;
+  taskType: CRMTaskType;
+  dueAt: string;
+  status: CRMAutomationRunStatus;
+  executedAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+};
+
 export const CRM_LIFECYCLE_STATUS_OPTIONS: Array<{
   label: string;
   value: CRMContactLifecycleStatus;
@@ -141,6 +183,39 @@ export function getCrmTaskStatusLabel(status: CRMTaskStatus) {
 
 export function getCrmTaskTypeLabel(type: CRMTaskType) {
   return CRM_TASK_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? type;
+}
+
+export function getCrmAutomationTriggerLabel(trigger: CRMAutomationTriggerType) {
+  switch (trigger) {
+    case "skin_quiz_completed":
+      return "Skin Quiz completado";
+    case "checkout_completed":
+      return "Checkout completado";
+    case "abandoned_cart":
+      return "Carrito abandonado";
+    case "post_purchase":
+      return "Post compra";
+    case "repurchase_due":
+      return "Recompra pendiente";
+    case "customer_inactive":
+      return "Cliente inactivo";
+    default:
+      return trigger;
+  }
+}
+
+export function getCrmAutomationRunStatusLabel(status: CRMAutomationRunStatus) {
+  switch (status) {
+    case "executed":
+      return "Ejecutada";
+    case "skipped":
+      return "Omitida";
+    case "failed":
+      return "Fallida";
+    case "pending":
+    default:
+      return "Pendiente";
+  }
 }
 
 export function getCrmSkinTypeLabel(value: string | null) {

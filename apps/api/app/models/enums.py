@@ -60,3 +60,19 @@ class CRMTaskType(StrEnum):
     REPURCHASE = "repurchase"
     POST_PURCHASE = "post_purchase"
     MANUAL = "manual"
+
+
+class CRMAutomationTriggerType(StrEnum):
+    SKIN_QUIZ_COMPLETED = "skin_quiz_completed"
+    CHECKOUT_COMPLETED = "checkout_completed"
+    ABANDONED_CART = "abandoned_cart"
+    POST_PURCHASE = "post_purchase"
+    REPURCHASE_DUE = "repurchase_due"
+    CUSTOMER_INACTIVE = "customer_inactive"
+
+
+class CRMAutomationRunStatus(StrEnum):
+    PENDING = "pending"
+    EXECUTED = "executed"
+    SKIPPED = "skipped"
+    FAILED = "failed"
