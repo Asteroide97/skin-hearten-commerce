@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -88,12 +88,18 @@ class Coupon(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String(80), unique=True)
-    coupon_type: Mapped[CouponType] = mapped_column(Enum(CouponType))
-    value: Mapped[float] = mapped_column(Numeric(10, 2))
-    starts_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True))
-    ends_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True))
-    minimum_amount: Mapped[float | None] = mapped_column(Numeric(10, 2))
-    max_uses: Mapped[int | None] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str | None] = mapped_column(Text())
+    discount_type: Mapped[CouponType] = mapped_column(Enum(CouponType))
+    discount_value: Mapped[float] = mapped_column(Numeric(10, 2))
+    min_subtotal: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    max_discount: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    usage_limit: Mapped[int | None] = mapped_column(Integer)
+    usage_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    per_customer_limit: Mapped[int | None] = mapped_column(Integer)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=func.true())
 
 
 class CouponUsage(TimestampMixin, Base):
@@ -103,3 +109,15 @@ class CouponUsage(TimestampMixin, Base):
     coupon_id: Mapped[int] = mapped_column(ForeignKey("coupons.id"))
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"))
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"))
+
+
+class CouponRedemption(Base):
+    __tablename__ = "coupon_redemptions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    coupon_id: Mapped[int] = mapped_column(ForeignKey("coupons.id"))
+    order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id"))
+    customer_email: Mapped[str | None] = mapped_column(String(255))
+    customer_phone: Mapped[str | None] = mapped_column(String(30))
+    discount_amount: Mapped[float] = mapped_column(Numeric(10, 2), default=0, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

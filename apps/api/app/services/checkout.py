@@ -13,11 +13,11 @@ from app.models import Customer, InventoryMovement, Order, OrderItem, Payment, P
 from app.models.enums import InventoryMovementType, OrderStatus, PaymentProvider, PaymentStatus
 from app.schemas.checkout import CheckoutItemInput, CheckoutNextAction, CheckoutRequest, CheckoutResponse
 from app.services.crm import upsert_contact_from_checkout
+from app.services.coupon_engine import calculate_checkout_totals
 from app.services.mock_store import (
     create_order,
     create_payment,
     get_checkout_by_idempotency_key,
-    get_coupon_by_code,
     get_next_order_id,
     get_product,
     get_product_by_slug,
@@ -73,30 +73,6 @@ def _build_mock_order_item(item: CheckoutItemInput, product: dict) -> dict:
         "unit_price": unit_price,
         "slug": str(product.get("slug") or item.slug),
     }
-
-
-def _calculate_discount(subtotal: float, coupon_code: str | None) -> tuple[float, float, str | None]:
-    shipping_total = 0.0 if subtotal >= FREE_SHIPPING_THRESHOLD else STANDARD_SHIPPING_AMOUNT
-
-    if not coupon_code:
-        return 0.0, shipping_total, None
-
-    coupon = get_coupon_by_code(coupon_code)
-    if not coupon:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid coupon code")
-
-    coupon_type = str(coupon.get("coupon_type"))
-    value = float(coupon.get("value") or 0)
-    discount_total = 0.0
-
-    if coupon_type == "percentage":
-        discount_total = round(subtotal * (value / 100), 2)
-    elif coupon_type == "fixed":
-        discount_total = min(subtotal, value)
-    elif coupon_type == "free_shipping":
-        shipping_total = 0.0
-
-    return discount_total, shipping_total, str(coupon.get("code"))
 
 
 def _build_mock_next_action(payment_method: str) -> tuple[str, str, CheckoutNextAction]:
@@ -232,7 +208,14 @@ def create_mock_checkout_order(
 
     resolved_items = [_build_mock_order_item(item, _resolve_mock_product(item)) for item in payload.items]
     subtotal = round(sum(item["quantity"] * item["unit_price"] for item in resolved_items), 2)
-    discount_total, shipping_total, normalized_coupon_code = _calculate_discount(subtotal, payload.coupon_code)
+    discount_total, shipping_total, normalized_coupon_code = calculate_checkout_totals(
+        db,
+        subtotal=subtotal,
+        coupon_code=payload.coupon_code,
+        customer_email=payload.customer.email,
+        customer_phone=payload.customer.phone,
+        persist_redemption=False,
+    )
     grand_total = round(subtotal - discount_total + shipping_total, 2)
 
     order_id = get_next_order_id()
@@ -293,7 +276,18 @@ def create_mock_checkout_order(
             "paid_at": datetime.now(timezone.utc) if payment_status == "mock_paid" else None,
             "failed_at": None,
         }
-    )
+        )
+
+    if normalized_coupon_code:
+        calculate_checkout_totals(
+            db,
+            subtotal=subtotal,
+            coupon_code=normalized_coupon_code,
+            customer_email=payload.customer.email,
+            customer_phone=payload.customer.phone,
+            order_id=order["id"],
+            persist_redemption=True,
+        )
 
     for item in resolved_items:
         reserve_product_inventory(
@@ -350,7 +344,14 @@ def create_checkout_order(
     customer = _upsert_db_customer(db, payload)
     resolved_items = [_build_db_order_item(item, _resolve_db_product(db, item)) for item in payload.items]
     subtotal = round(sum(item["quantity"] * item["unit_price"] for item in resolved_items), 2)
-    discount_total, shipping_total, normalized_coupon_code = _calculate_discount(subtotal, payload.coupon_code)
+    discount_total, shipping_total, normalized_coupon_code = calculate_checkout_totals(
+        db,
+        subtotal=subtotal,
+        coupon_code=payload.coupon_code,
+        customer_email=payload.customer.email,
+        customer_phone=payload.customer.phone,
+        persist_redemption=False,
+    )
     grand_total = round(subtotal - discount_total + shipping_total, 2)
     order_number = _build_order_number()
     provider = _payment_provider_from_method(payload.payment_method)
@@ -369,6 +370,17 @@ def create_checkout_order(
         )
         db.add(order)
         db.flush()
+
+        if normalized_coupon_code:
+            calculate_checkout_totals(
+                db,
+                subtotal=subtotal,
+                coupon_code=normalized_coupon_code,
+                customer_email=payload.customer.email,
+                customer_phone=payload.customer.phone,
+                order_id=order.id,
+                persist_redemption=True,
+            )
 
         for item in resolved_items:
             product = item["product"]

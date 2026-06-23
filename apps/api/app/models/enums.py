@@ -38,6 +38,7 @@ class PaymentStatus(StrEnum):
 class CouponType(StrEnum):
     PERCENTAGE = "percentage"
     FIXED = "fixed"
+    FIXED_AMOUNT = "fixed_amount"
     FREE_SHIPPING = "free_shipping"
 
 

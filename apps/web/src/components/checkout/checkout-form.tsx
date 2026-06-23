@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
+import { CouponApplyForm } from "@/components/store/coupon-apply-form";
 import { trackEvent } from "@/lib/analytics";
 import {
   buildCheckoutIdempotencyKey,
@@ -33,10 +34,10 @@ export function CheckoutForm() {
   const router = useRouter();
   const idempotencyKeyRef = useRef<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const { items, discountRate, couponCode, clearCart } = useCartStore();
+  const { items, coupon, clearCart } = useCartStore();
   const subtotal = getCartSubtotal(items);
-  const discount = getCartDiscount(subtotal, discountRate);
-  const shipping = couponCode === "ENVIOGRATIS" ? 0 : getCartShipping(subtotal);
+  const discount = getCartDiscount(coupon);
+  const shipping = getCartShipping(subtotal, coupon);
   const total = getCartTotal(subtotal, discount, shipping);
   const itemCount = getCartItemCount(items);
 
@@ -73,7 +74,7 @@ export function CheckoutForm() {
     });
 
     const payload = buildCheckoutRequestPayload({
-      couponCode,
+      couponCode: coupon?.code,
       customer: {
         firstName: values.firstName,
         lastName: values.lastName,
@@ -228,6 +229,10 @@ export function CheckoutForm() {
             <span>Total</span>
             <span>{formatCurrency(total)}</span>
           </div>
+        </div>
+
+        <div className="mt-8">
+          <CouponApplyForm customerEmail={form.watch("email")} customerPhone={form.watch("phone")} />
         </div>
       </aside>
     </div>

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { trackEvent } from "@/lib/analytics";
 import { formatCurrency } from "@/lib/format";
+import { CouponApplyForm } from "@/components/store/coupon-apply-form";
 import {
   getCartDiscount,
   getCartItemCount,
@@ -15,16 +16,11 @@ import {
 } from "@/store/cart-store";
 
 export function CartPage() {
-  const [couponInput, setCouponInput] = useState("");
-  const [couponMessage, setCouponMessage] = useState<string | null>(null);
-  const { items, discountRate, couponCode, removeItem, updateQuantity, applyCoupon } = useCartStore();
+  const { items, coupon, removeItem, updateQuantity } = useCartStore();
 
   const subtotal = useMemo(() => getCartSubtotal(items), [items]);
-  const discount = useMemo(() => getCartDiscount(subtotal, discountRate), [discountRate, subtotal]);
-  const shipping = useMemo(
-    () => (couponCode === "ENVIOGRATIS" ? 0 : getCartShipping(subtotal)),
-    [couponCode, subtotal],
-  );
+  const discount = useMemo(() => getCartDiscount(coupon), [coupon]);
+  const shipping = useMemo(() => getCartShipping(subtotal, coupon), [coupon, subtotal]);
   const total = useMemo(() => getCartTotal(subtotal, discount, shipping), [discount, shipping, subtotal]);
   const itemCount = useMemo(() => getCartItemCount(items), [items]);
 
@@ -98,29 +94,8 @@ export function CartPage() {
           </div>
         </div>
 
-        <div className="mt-8 space-y-3">
-          <label className="block">
-            <span className="text-sm font-semibold text-stone-900">Cupon</span>
-            <div className="mt-3 flex gap-2">
-              <input
-                className="w-full rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700"
-                onChange={(event) => setCouponInput(event.target.value)}
-                placeholder="GLOW10 o ENVIOGRATIS"
-                value={couponInput}
-              />
-              <button
-                className="rounded-full bg-stone-950 px-4 py-3 text-sm font-medium text-white"
-                onClick={() => {
-                  const success = applyCoupon(couponInput);
-                  setCouponMessage(success ? "Cupon aplicado" : "Cupon invalido");
-                }}
-                type="button"
-              >
-                Aplicar
-              </button>
-            </div>
-          </label>
-          {couponMessage ? <p className="text-sm text-stone-600">{couponMessage}</p> : null}
+        <div className="mt-8">
+          <CouponApplyForm />
         </div>
 
         <Link

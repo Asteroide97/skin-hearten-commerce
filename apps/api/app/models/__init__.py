@@ -1,6 +1,16 @@
 from app.models.base import Base
 from app.models.catalog import Brand, Category, Product, ProductImage, ProductReview
-from app.models.commerce import Cart, CartItem, Coupon, CouponUsage, InventoryMovement, Order, OrderItem, Payment
+from app.models.commerce import (
+    Cart,
+    CartItem,
+    Coupon,
+    CouponRedemption,
+    CouponUsage,
+    InventoryMovement,
+    Order,
+    OrderItem,
+    Payment,
+)
 from app.models.content import BlogPost, Setting
 from app.models.crm import (
     CRMAutomationRule,
@@ -23,6 +33,7 @@ __all__ = [
     "CartItem",
     "Category",
     "Coupon",
+    "CouponRedemption",
     "CouponUsage",
     "CRMAutomationRule",
     "CRMAutomationRun",

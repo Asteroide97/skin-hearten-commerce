@@ -10,14 +10,22 @@ export type CartItem = {
   quantity: number;
 };
 
+export type AppliedCoupon = {
+  code: string;
+  discountType: "percentage" | "fixed_amount" | "free_shipping";
+  discountAmount: number;
+  freeShipping: boolean;
+  message: string;
+};
+
 type CartState = {
   items: CartItem[];
-  couponCode?: string;
-  discountRate: number;
+  coupon: AppliedCoupon | null;
   addItem: (item: Omit<CartItem, "quantity">) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
-  applyCoupon: (code: string) => boolean;
+  setCoupon: (coupon: AppliedCoupon) => void;
+  clearCoupon: () => void;
   clearCart: () => void;
 };
 
@@ -33,12 +41,12 @@ export function getCartItemCount(items: CartItem[]) {
   return items.reduce((sum, item) => sum + item.quantity, 0);
 }
 
-export function getCartDiscount(subtotal: number, discountRate: number) {
-  return subtotal * discountRate;
+export function getCartDiscount(coupon: AppliedCoupon | null | undefined) {
+  return coupon?.discountAmount ?? 0;
 }
 
-export function getCartShipping(subtotal: number) {
-  return subtotal >= 1999 || subtotal === 0 ? 0 : 149;
+export function getCartShipping(subtotal: number, coupon?: AppliedCoupon | null) {
+  return subtotal >= 1999 || subtotal === 0 || coupon?.freeShipping ? 0 : 149;
 }
 
 export function getCartTotal(subtotal: number, discount: number, shipping: number) {
@@ -47,13 +55,13 @@ export function getCartTotal(subtotal: number, discount: number, shipping: numbe
 
 export const useCartStore = create<CartState>((set) => ({
   items: [],
-  couponCode: undefined,
-  discountRate: 0,
+  coupon: null,
   addItem: (item) =>
     set((state) => {
       const existing = state.items.find((entry) => entry.productId === item.productId);
       if (existing) {
         return {
+          coupon: null,
           items: state.items.map((entry) =>
             entry.productId === item.productId
               ? { ...entry, quantity: normalizeQuantity(entry.quantity + 1) }
@@ -63,33 +71,23 @@ export const useCartStore = create<CartState>((set) => ({
       }
 
       return {
+        coupon: null,
         items: [...state.items, { ...item, quantity: 1 }],
       };
     }),
   removeItem: (productId) =>
     set((state) => ({
+      coupon: null,
       items: state.items.filter((item) => item.productId !== productId),
     })),
   updateQuantity: (productId, quantity) =>
     set((state) => ({
+      coupon: null,
       items: state.items.map((item) =>
         item.productId === productId ? { ...item, quantity: normalizeQuantity(quantity) } : item,
       ),
     })),
-  applyCoupon: (code) => {
-    const normalized = code.trim().toUpperCase();
-    if (normalized === "GLOW10") {
-      set({ couponCode: normalized, discountRate: 0.1 });
-      return true;
-    }
-
-    if (normalized === "ENVIOGRATIS") {
-      set({ couponCode: normalized, discountRate: 0 });
-      return true;
-    }
-
-    set({ couponCode: undefined, discountRate: 0 });
-    return false;
-  },
-  clearCart: () => set({ items: [], couponCode: undefined, discountRate: 0 }),
+  setCoupon: (coupon) => set({ coupon }),
+  clearCoupon: () => set({ coupon: null }),
+  clearCart: () => set({ items: [], coupon: null }),
 }));

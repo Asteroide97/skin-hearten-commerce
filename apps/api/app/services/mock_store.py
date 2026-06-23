@@ -398,9 +398,44 @@ PRODUCT_REVIEWS = [
 ]
 
 COUPONS = [
-    {"id": 1, "code": "GLOW10", "coupon_type": "percentage", "value": 10.0},
-    {"id": 2, "code": "ENVIOGRATIS", "coupon_type": "free_shipping", "value": 0.0},
+    {
+        "id": 1,
+        "code": "GLOW10",
+        "name": "Glow 10",
+        "description": "10% de descuento en tu rutina.",
+        "discount_type": "percentage",
+        "discount_value": 10.0,
+        "min_subtotal": None,
+        "max_discount": None,
+        "starts_at": None,
+        "ends_at": None,
+        "usage_limit": None,
+        "usage_count": 0,
+        "per_customer_limit": None,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    },
+    {
+        "id": 2,
+        "code": "ENVIOGRATIS",
+        "name": "Envio Gratis",
+        "description": "El envio corre por nuestra cuenta.",
+        "discount_type": "free_shipping",
+        "discount_value": 0.0,
+        "min_subtotal": None,
+        "max_discount": None,
+        "starts_at": None,
+        "ends_at": None,
+        "usage_limit": None,
+        "usage_count": 0,
+        "per_customer_limit": None,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    },
 ]
+COUPON_REDEMPTIONS: list[dict] = []
 
 USERS = [
     {
@@ -842,8 +877,103 @@ def update_payment(payment_id: int, payload: dict) -> dict | None:
     return deepcopy(payment)
 
 
+def list_coupons() -> list[dict]:
+    return [deepcopy(coupon) for coupon in sorted(COUPONS, key=lambda entry: entry["id"])]
+
+
+def get_coupon(coupon_id: int) -> dict | None:
+    return next((deepcopy(coupon) for coupon in COUPONS if coupon["id"] == coupon_id), None)
+
+
 def get_coupon_by_code(code: str) -> dict | None:
     return next((deepcopy(coupon) for coupon in COUPONS if coupon["code"] == code.upper()), None)
+
+
+def create_coupon(payload: dict) -> dict:
+    next_id = max(coupon["id"] for coupon in COUPONS) + 1 if COUPONS else 1
+    timestamp = datetime.now(timezone.utc)
+    coupon = {
+        "id": next_id,
+        "code": str(payload.get("code") or "").strip().upper(),
+        "name": payload.get("name"),
+        "description": payload.get("description"),
+        "discount_type": payload.get("discount_type"),
+        "discount_value": payload.get("discount_value"),
+        "min_subtotal": payload.get("min_subtotal"),
+        "max_discount": payload.get("max_discount"),
+        "starts_at": payload.get("starts_at"),
+        "ends_at": payload.get("ends_at"),
+        "usage_limit": payload.get("usage_limit"),
+        "usage_count": int(payload.get("usage_count") or 0),
+        "per_customer_limit": payload.get("per_customer_limit"),
+        "is_active": bool(payload.get("is_active", True)),
+        "created_at": timestamp,
+        "updated_at": timestamp,
+    }
+    COUPONS.append(coupon)
+    return deepcopy(coupon)
+
+
+def update_coupon(coupon_id: int, payload: dict) -> dict | None:
+    coupon = next((entry for entry in COUPONS if entry["id"] == coupon_id), None)
+    if not coupon:
+        return None
+
+    update_payload = deepcopy(payload)
+    if "code" in update_payload and update_payload["code"] is not None:
+        update_payload["code"] = str(update_payload["code"]).strip().upper()
+    update_payload["updated_at"] = datetime.now(timezone.utc)
+    coupon.update(update_payload)
+    return deepcopy(coupon)
+
+
+def delete_coupon(coupon_id: int) -> bool:
+    coupon = next((entry for entry in COUPONS if entry["id"] == coupon_id), None)
+    if not coupon:
+        return False
+
+    COUPONS.remove(coupon)
+    return True
+
+
+def list_coupon_redemptions(
+    *,
+    coupon_id: int | None = None,
+    customer_email: str | None = None,
+    customer_phone: str | None = None,
+) -> list[dict]:
+    normalized_email = _normalize_email(customer_email)
+    normalized_phone = _normalize_phone(customer_phone)
+
+    entries = COUPON_REDEMPTIONS
+    if coupon_id is not None:
+        entries = [entry for entry in entries if int(entry.get("coupon_id") or 0) == coupon_id]
+    if normalized_email:
+        entries = [entry for entry in entries if _normalize_email(entry.get("customer_email")) == normalized_email]
+    if normalized_phone:
+        entries = [entry for entry in entries if _normalize_phone(entry.get("customer_phone")) == normalized_phone]
+    return [deepcopy(entry) for entry in entries]
+
+
+def create_coupon_redemption(payload: dict) -> dict:
+    next_id = max(entry["id"] for entry in COUPON_REDEMPTIONS) + 1 if COUPON_REDEMPTIONS else 1
+    redemption = {
+        "id": next_id,
+        "coupon_id": int(payload["coupon_id"]),
+        "order_id": payload.get("order_id"),
+        "customer_email": _normalize_email(payload.get("customer_email")),
+        "customer_phone": _normalize_phone(payload.get("customer_phone")),
+        "discount_amount": float(payload.get("discount_amount") or 0),
+        "created_at": payload.get("created_at") or datetime.now(timezone.utc),
+    }
+    COUPON_REDEMPTIONS.append(redemption)
+
+    coupon = next((entry for entry in COUPONS if entry["id"] == redemption["coupon_id"]), None)
+    if coupon:
+        coupon["usage_count"] = int(coupon.get("usage_count") or 0) + 1
+        coupon["updated_at"] = datetime.now(timezone.utc)
+
+    return deepcopy(redemption)
 
 
 def reserve_product_inventory(
