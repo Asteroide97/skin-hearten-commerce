@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CustomerOrdersLookup } from "@/components/account/customer-orders-lookup";
 import { SectionHeading } from "@/components/shared/section-heading";
 
 const accountBlocks = [
@@ -26,8 +27,8 @@ export default function AccountPage() {
     <div className="mx-auto max-w-7xl space-y-8 px-5 py-8 sm:px-6 lg:px-8">
       <SectionHeading
         eyebrow="Cuenta"
-        title="Area cliente preparada para autenticacion real"
-        description="Estructura inicial para perfil, direcciones, historial y favoritos."
+        title="Tu cuenta Skin Hearten"
+        description="Consulta pedidos reales con tu email o telefono y deja lista tu area cliente para futuras funciones de perfil, direcciones y favoritos."
       />
       <div className="flex flex-wrap gap-3">
         <Link className="rounded-full bg-stone-950 px-5 py-3 text-sm text-white" href="/ingresar">
@@ -37,6 +38,7 @@ export default function AccountPage() {
           Crear cuenta
         </Link>
       </div>
+      <CustomerOrdersLookup />
       <div className="grid gap-6 md:grid-cols-2">
         {accountBlocks.map((block) => (
           <div className="soft-panel rounded-[1.8rem] p-6" key={block.title}>
@@ -48,4 +50,3 @@ export default function AccountPage() {
     </div>
   );
 }
-

@@ -15,6 +15,7 @@ from app.api.routes import (
     cart,
     categories,
     checkout,
+    customer_orders,
     health,
     orders,
     payments,
@@ -29,6 +30,7 @@ api_router.include_router(categories.router, tags=["categories"])
 api_router.include_router(brands.router, tags=["brands"])
 api_router.include_router(cart.router, tags=["cart"])
 api_router.include_router(checkout.router, tags=["checkout"])
+api_router.include_router(customer_orders.router, tags=["customer-orders"])
 api_router.include_router(health.router, tags=["health"])
 api_router.include_router(payments.router, tags=["payments"])
 api_router.include_router(orders.router, tags=["orders"])
