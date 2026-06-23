@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     paypal_client_secret: str = ""
     azure_blob_connection_string: str = ""
     azure_blob_container: str = "skin-hearten"
+    public_asset_base_url: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

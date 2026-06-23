@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class CategoryRead(BaseModel):
@@ -32,6 +32,14 @@ class ProductFaqEntry(BaseModel):
     answer: str
 
 
+class ProductImageRead(BaseModel):
+    id: int
+    url: str
+    altText: str | None = None
+    sortOrder: int
+    isPrimary: bool = False
+
+
 class ProductRead(BaseModel):
     id: int
     name: str
@@ -48,6 +56,7 @@ class ProductRead(BaseModel):
     compareAtPrice: float | None = None
     image: str | None = None
     images: list[str] = Field(default_factory=list)
+    imageObjects: list[ProductImageRead] = Field(default_factory=list)
     rating: float = 0
     reviewCount: int = 0
     badges: list[str] = Field(default_factory=list)
@@ -86,3 +95,15 @@ class ProductWrite(BaseModel):
     skin_type: list[str] = Field(default_factory=list)
     concern: list[str] = Field(default_factory=list)
     is_active: bool = True
+
+
+class ProductImageUpdate(BaseModel):
+    altText: str | None = Field(default=None, max_length=255)
+    sortOrder: int | None = Field(default=None, ge=0)
+    isPrimary: bool | None = None
+
+    @model_validator(mode="after")
+    def validate_payload(self) -> "ProductImageUpdate":
+        if self.altText is None and self.sortOrder is None and self.isPrimary is None:
+            raise ValueError("At least one image field must be provided")
+        return self

@@ -58,6 +58,8 @@ class ProductImage(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
     image_url: Mapped[str] = mapped_column(String(255))
+    alt_text: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    storage_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     product: Mapped["Product"] = relationship(back_populates="images")

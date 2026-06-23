@@ -21,6 +21,44 @@ def _coerce_list(value: object) -> list[str]:
     return []
 
 
+def _coerce_image_objects(value: object, fallback_images: list[str]) -> list[dict[str, object]]:
+    if isinstance(value, list):
+        normalized: list[dict[str, object]] = []
+        for index, entry in enumerate(value):
+            if not isinstance(entry, dict):
+                continue
+            url = str(entry.get("url") or "").strip()
+            if not url:
+                continue
+            normalized.append(
+                {
+                    "id": int(entry.get("id") or index + 1),
+                    "url": url,
+                    "altText": str(entry.get("altText") or "").strip() or None,
+                    "sortOrder": int(entry.get("sortOrder") or index),
+                    "isPrimary": bool(entry.get("isPrimary", index == 0)),
+                }
+            )
+        if normalized:
+            normalized.sort(key=lambda entry: (int(entry["sortOrder"]), int(entry["id"])))
+            primary_assigned = any(bool(entry["isPrimary"]) for entry in normalized)
+            if not primary_assigned and normalized:
+                normalized[0]["isPrimary"] = True
+            return normalized
+
+    return [
+        {
+            "id": index + 1,
+            "url": image_url,
+            "altText": None,
+            "sortOrder": index,
+            "isPrimary": index == 0,
+        }
+        for index, image_url in enumerate(fallback_images)
+        if image_url.strip()
+    ]
+
+
 def _build_gradient(category_name: str) -> str:
     gradients = {
         "limpiadores": "from-stone-100 via-white to-amber-50",
@@ -94,6 +132,7 @@ def _resolve_prices(product: dict) -> tuple[float, float | None]:
 def serialize_product(product: dict) -> dict:
     images = _coerce_list(product.get("images"))
     image = str(product.get("image") or "").strip() or (images[0] if images else None)
+    image_objects = _coerce_image_objects(product.get("imageObjects") or product.get("image_objects"), images if images else ([image] if image else []))
     brand_name = str(product.get("brand") or product.get("brand_name") or "").strip()
     category_name = str(product.get("category") or product.get("category_name") or "").strip()
     price, compare_at_price = _resolve_prices(product)
@@ -126,6 +165,7 @@ def serialize_product(product: dict) -> dict:
         "compareAtPrice": compare_at_price,
         "image": image,
         "images": images if images else ([image] if image else []),
+        "imageObjects": image_objects,
         "rating": float(product.get("rating", 4.8)),
         "reviewCount": int(product.get("reviewCount", product.get("review_count", 0)) or 0),
         "badges": badges,

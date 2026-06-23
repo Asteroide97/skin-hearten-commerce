@@ -61,6 +61,16 @@ def _category_to_dict(category: Category) -> dict[str, Any]:
     }
 
 
+def _product_image_to_dict(image: ProductImage, *, is_primary: bool) -> dict[str, Any]:
+    return {
+        "id": int(image.id),
+        "url": image.image_url,
+        "altText": image.alt_text,
+        "sortOrder": int(image.sort_order),
+        "isPrimary": is_primary,
+    }
+
+
 def _product_to_dict(
     product: Product,
     *,
@@ -69,6 +79,12 @@ def _product_to_dict(
 ) -> dict[str, Any]:
     images = sorted(product.images, key=lambda image: image.sort_order)
     image_urls = [image.image_url for image in images if image.image_url]
+    primary_image_id = int(images[0].id) if images else None
+    image_objects = [
+        _product_image_to_dict(image, is_primary=int(image.id) == primary_image_id)
+        for image in images
+        if image.image_url
+    ]
 
     return {
         "benefits": _split_text_list(product.benefits),
@@ -84,6 +100,7 @@ def _product_to_dict(
         "id": product.id,
         "image": image_urls[0] if image_urls else None,
         "images": image_urls,
+        "imageObjects": image_objects,
         "ingredients": _split_text_list(product.ingredients),
         "is_active": bool(product.is_active),
         "name": product.name,
@@ -337,4 +354,3 @@ def sync_product_images(
         db.add(ProductImage(product_id=product.id, image_url=image_url, sort_order=sort_order))
     db.add(product)
     db.commit()
-

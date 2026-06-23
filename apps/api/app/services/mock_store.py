@@ -520,15 +520,94 @@ CRM_REMINDERS: list[dict] = []
 IMPORT_JOBS: list[dict] = []
 
 
+def _normalize_product_image_object(image: dict, *, fallback_index: int, fallback_id: int) -> dict:
+    url = str(image.get("url") or "").strip()
+    return {
+        "id": int(image.get("id") or fallback_id),
+        "url": url,
+        "altText": str(image.get("altText") or "").strip() or None,
+        "sortOrder": int(image.get("sortOrder") or fallback_index),
+        "isPrimary": bool(image.get("isPrimary", fallback_index == 0)),
+        "storagePath": image.get("storagePath"),
+    }
+
+
+def _next_mock_product_image_id() -> int:
+    highest_id = 0
+    for product in PRODUCTS:
+        for image in product.get("imageObjects", []):
+            highest_id = max(highest_id, int(image.get("id") or 0))
+    return highest_id + 1
+
+
+def _sync_product_image_fields(product: dict) -> None:
+    image_objects = sorted(
+        [
+            image
+            for image in product.get("imageObjects", [])
+            if str(image.get("url") or "").strip()
+        ],
+        key=lambda image: (int(image.get("sortOrder") or 0), int(image.get("id") or 0)),
+    )
+    for index, image in enumerate(image_objects):
+        image["sortOrder"] = index
+        image["isPrimary"] = index == 0
+
+    product["imageObjects"] = image_objects
+    product["images"] = [str(image["url"]) for image in image_objects]
+    product["image"] = product["images"][0] if product["images"] else None
+
+
+def _ensure_product_image_objects() -> None:
+    next_id = _next_mock_product_image_id()
+    for product in PRODUCTS:
+        raw_image_objects = product.get("imageObjects")
+        if isinstance(raw_image_objects, list) and raw_image_objects:
+            normalized_images: list[dict] = []
+            for index, image in enumerate(raw_image_objects):
+                if not isinstance(image, dict):
+                    continue
+                normalized_image = _normalize_product_image_object(image, fallback_index=index, fallback_id=next_id)
+                next_id = max(next_id, normalized_image["id"] + 1)
+                if normalized_image["url"]:
+                    normalized_images.append(normalized_image)
+            product["imageObjects"] = normalized_images
+            _sync_product_image_fields(product)
+            continue
+
+        normalized_images = []
+        image_urls = product.get("images") or ([product.get("image")] if product.get("image") else [])
+        for index, image_url in enumerate(image_urls):
+            image_url_text = str(image_url or "").strip()
+            if not image_url_text:
+                continue
+            normalized_images.append(
+                {
+                    "id": next_id,
+                    "url": image_url_text,
+                    "altText": None,
+                    "sortOrder": index,
+                    "isPrimary": index == 0,
+                    "storagePath": None,
+                }
+            )
+            next_id += 1
+        product["imageObjects"] = normalized_images
+        _sync_product_image_fields(product)
+
+
 def list_products() -> list[dict]:
+    _ensure_product_image_objects()
     return deepcopy(PRODUCTS)
 
 
 def get_product(product_id: int) -> dict | None:
+    _ensure_product_image_objects()
     return next((deepcopy(product) for product in PRODUCTS if product["id"] == product_id), None)
 
 
 def get_product_by_slug(slug: str) -> dict | None:
+    _ensure_product_image_objects()
     return next((deepcopy(product) for product in PRODUCTS if product["slug"] == slug), None)
 
 
@@ -1345,26 +1424,101 @@ def update_product_review(review_id: int, payload: dict) -> dict | None:
 
 
 def create_product(payload: dict) -> dict:
+    _ensure_product_image_objects()
     next_id = max(product["id"] for product in PRODUCTS) + 1 if PRODUCTS else 1
-    product = {"id": next_id, **payload}
+    product = {"id": next_id, **payload, "imageObjects": payload.get("imageObjects", [])}
+    _sync_product_image_fields(product)
     PRODUCTS.append(product)
     return deepcopy(product)
 
 
 def update_product(product_id: int, payload: dict) -> dict | None:
+    _ensure_product_image_objects()
     product = next((entry for entry in PRODUCTS if entry["id"] == product_id), None)
     if not product:
         return None
+    existing_image_objects = deepcopy(product.get("imageObjects", []))
     product.update(payload)
+    if "imageObjects" not in payload:
+        product["imageObjects"] = existing_image_objects
+    _sync_product_image_fields(product)
     return deepcopy(product)
 
 
 def delete_product(product_id: int) -> bool:
+    _ensure_product_image_objects()
     index = next((idx for idx, product in enumerate(PRODUCTS) if product["id"] == product_id), None)
     if index is None:
         return False
     PRODUCTS.pop(index)
     return True
+
+
+def create_product_image(product_id: int, payload: dict) -> dict | None:
+    _ensure_product_image_objects()
+    product = next((entry for entry in PRODUCTS if entry["id"] == product_id), None)
+    if not product:
+        return None
+
+    next_id = _next_mock_product_image_id()
+    image = {
+        "id": next_id,
+        "url": str(payload.get("url") or "").strip(),
+        "altText": payload.get("altText"),
+        "sortOrder": int(payload.get("sortOrder") or len(product.get("imageObjects", []))),
+        "isPrimary": bool(payload.get("isPrimary", False)),
+        "storagePath": payload.get("storagePath"),
+    }
+    product.setdefault("imageObjects", []).append(image)
+    _sync_product_image_fields(product)
+    return next((deepcopy(entry) for entry in product["imageObjects"] if entry["id"] == next_id), None)
+
+
+def update_product_image(product_id: int, image_id: int, payload: dict) -> dict | None:
+    _ensure_product_image_objects()
+    product = next((entry for entry in PRODUCTS if entry["id"] == product_id), None)
+    if not product:
+        return None
+
+    images = product.get("imageObjects", [])
+    image = next((entry for entry in images if entry["id"] == image_id), None)
+    if not image:
+        return None
+
+    if "altText" in payload:
+        image["altText"] = payload.get("altText")
+
+    if payload.get("isPrimary"):
+        image["sortOrder"] = 0
+
+    if payload.get("sortOrder") is not None:
+        image["sortOrder"] = max(0, int(payload["sortOrder"]))
+
+    _sync_product_image_fields(product)
+
+    if payload.get("isPrimary") or payload.get("sortOrder") is not None:
+        ordered_images = [entry for entry in product["imageObjects"] if entry["id"] != image_id]
+        insertion_index = max(0, min(int(image["sortOrder"]), len(ordered_images)))
+        ordered_images.insert(insertion_index, image)
+        product["imageObjects"] = ordered_images
+        _sync_product_image_fields(product)
+
+    return next((deepcopy(entry) for entry in product["imageObjects"] if entry["id"] == image_id), None)
+
+
+def delete_product_image(product_id: int, image_id: int) -> dict | None:
+    _ensure_product_image_objects()
+    product = next((entry for entry in PRODUCTS if entry["id"] == product_id), None)
+    if not product:
+        return None
+
+    image = next((entry for entry in product.get("imageObjects", []) if entry["id"] == image_id), None)
+    if not image:
+        return None
+
+    product["imageObjects"] = [entry for entry in product.get("imageObjects", []) if entry["id"] != image_id]
+    _sync_product_image_fields(product)
+    return deepcopy(image)
 
 
 def create_entity(collection: list[dict], payload: dict) -> dict:
