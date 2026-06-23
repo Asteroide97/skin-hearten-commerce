@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
+    admin_reviews,
     admin_imports,
     admin_crm,
     admin_brands,
@@ -19,12 +20,14 @@ from app.api.routes import (
     health,
     orders,
     payments,
+    product_reviews,
     products,
     skin_quiz,
 )
 
 api_router = APIRouter()
 api_router.include_router(auth.router, tags=["auth"])
+api_router.include_router(product_reviews.router, tags=["product-reviews"])
 api_router.include_router(products.router, tags=["products"])
 api_router.include_router(categories.router, tags=["categories"])
 api_router.include_router(brands.router, tags=["brands"])
@@ -40,6 +43,7 @@ api_router.include_router(admin_products.router, tags=["admin-products"])
 api_router.include_router(admin_categories.router, tags=["admin-categories"])
 api_router.include_router(admin_brands.router, tags=["admin-brands"])
 api_router.include_router(admin_orders.router, tags=["admin-orders"])
+api_router.include_router(admin_reviews.router, tags=["admin-reviews"])
 api_router.include_router(admin_crm.router, tags=["admin-crm"])
 api_router.include_router(admin_imports.router, tags=["admin-imports"])
 api_router.include_router(admin_skin_quiz_analytics.router, tags=["admin-skin-quiz-analytics"])

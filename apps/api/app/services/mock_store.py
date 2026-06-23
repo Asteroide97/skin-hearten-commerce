@@ -329,6 +329,74 @@ BLOG_POSTS = [
     }
 ]
 
+PRODUCT_REVIEWS = [
+    {
+        "id": 1,
+        "product_id": 1,
+        "customer_name": "Mariana R.",
+        "customer_email": "mariana@example.com",
+        "rating": 5,
+        "title": "Textura y luminosidad reales",
+        "body": "Lo uso por la noche y mi piel amanece mucho mas uniforme, suave y con mejor luminosidad.",
+        "status": "approved",
+        "source": "customer",
+        "created_at": datetime.now(timezone.utc),
+        "approved_at": datetime.now(timezone.utc),
+    },
+    {
+        "id": 2,
+        "product_id": 1,
+        "customer_name": "Fernanda C.",
+        "customer_email": None,
+        "rating": 4,
+        "title": "Ideal para antiedad ligera",
+        "body": "Me gusto porque se siente elegante, no pesado, y combina bien con mi crema nocturna.",
+        "status": "approved",
+        "source": "imported",
+        "created_at": datetime.now(timezone.utc),
+        "approved_at": datetime.now(timezone.utc),
+    },
+    {
+        "id": 3,
+        "product_id": 2,
+        "customer_name": "Paola M.",
+        "customer_email": "paola@example.com",
+        "rating": 5,
+        "title": "Limpieza suave",
+        "body": "No me deja tirantez y me ha funcionado muy bien para una piel sensible y deshidratada.",
+        "status": "approved",
+        "source": "customer",
+        "created_at": datetime.now(timezone.utc),
+        "approved_at": datetime.now(timezone.utc),
+    },
+    {
+        "id": 4,
+        "product_id": 4,
+        "customer_name": "Andrea V.",
+        "customer_email": None,
+        "rating": 4,
+        "title": "Acabado comodo",
+        "body": "Se reaplica facil, no deja capa blanca y lo uso diario debajo del maquillaje.",
+        "status": "approved",
+        "source": "admin",
+        "created_at": datetime.now(timezone.utc),
+        "approved_at": datetime.now(timezone.utc),
+    },
+    {
+        "id": 5,
+        "product_id": 3,
+        "customer_name": "Lucia S.",
+        "customer_email": "lucia@example.com",
+        "rating": 5,
+        "title": "Pendiente de moderacion",
+        "body": "La textura me encanto y siento la piel mas comoda desde la primera semana de uso.",
+        "status": "pending",
+        "source": "customer",
+        "created_at": datetime.now(timezone.utc),
+        "approved_at": None,
+    },
+]
+
 COUPONS = [
     {"id": 1, "code": "GLOW10", "coupon_type": "percentage", "value": 10.0},
     {"id": 2, "code": "ENVIOGRATIS", "coupon_type": "free_shipping", "value": 0.0},
@@ -1209,6 +1277,71 @@ def list_import_jobs() -> list[dict]:
     jobs = [deepcopy(job) for job in IMPORT_JOBS]
     jobs.sort(key=lambda job: job.get("created_at") or datetime.now(timezone.utc), reverse=True)
     return jobs
+
+
+def list_product_reviews(
+    *,
+    product_id: int | None = None,
+    rating: int | None = None,
+    search: str | None = None,
+    status: str | None = None,
+) -> list[dict]:
+    normalized_search = search.strip().lower() if search else None
+    reviews = [deepcopy(review) for review in PRODUCT_REVIEWS]
+
+    filtered: list[dict] = []
+    for review in reviews:
+        if product_id is not None and review["product_id"] != product_id:
+            continue
+        if status and review.get("status") != status:
+            continue
+        if rating is not None and int(review.get("rating") or 0) != rating:
+            continue
+        if normalized_search:
+            haystack = " ".join(
+                [
+                    str(review.get("customer_name") or ""),
+                    str(review.get("customer_email") or ""),
+                    str(review.get("title") or ""),
+                    str(review.get("body") or ""),
+                ]
+            ).lower()
+            if normalized_search not in haystack:
+                continue
+        filtered.append(review)
+
+    return sorted(
+        filtered,
+        key=lambda review: review.get("created_at") or datetime.now(timezone.utc),
+        reverse=True,
+    )
+
+
+def get_product_review(review_id: int) -> dict | None:
+    review = next((entry for entry in PRODUCT_REVIEWS if entry["id"] == review_id), None)
+    if not review:
+        return None
+    return deepcopy(review)
+
+
+def create_product_review(payload: dict) -> dict:
+    next_id = max(review["id"] for review in PRODUCT_REVIEWS) + 1 if PRODUCT_REVIEWS else 1
+    review = {
+        "id": next_id,
+        "created_at": datetime.now(timezone.utc),
+        "approved_at": payload.get("approved_at"),
+        **payload,
+    }
+    PRODUCT_REVIEWS.append(review)
+    return deepcopy(review)
+
+
+def update_product_review(review_id: int, payload: dict) -> dict | None:
+    review = next((entry for entry in PRODUCT_REVIEWS if entry["id"] == review_id), None)
+    if not review:
+        return None
+    review.update(payload)
+    return deepcopy(review)
 
 
 def create_product(payload: dict) -> dict:

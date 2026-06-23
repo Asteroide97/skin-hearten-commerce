@@ -1,7 +1,10 @@
-from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, Text
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+from app.models.enums import ProductReviewSource, ProductReviewStatus
 from app.models.mixins import TimestampMixin
 
 
@@ -59,3 +62,32 @@ class ProductImage(TimestampMixin, Base):
 
     product: Mapped["Product"] = relationship(back_populates="images")
 
+
+class ProductReview(Base):
+    __tablename__ = "product_reviews"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
+    customer_name: Mapped[str] = mapped_column(String(255))
+    customer_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    rating: Mapped[int] = mapped_column(Integer)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    body: Mapped[str] = mapped_column(Text())
+    status: Mapped[ProductReviewStatus] = mapped_column(
+        Enum(
+            ProductReviewStatus,
+            native_enum=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        default=ProductReviewStatus.PENDING,
+    )
+    source: Mapped[ProductReviewSource] = mapped_column(
+        Enum(
+            ProductReviewSource,
+            native_enum=False,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        default=ProductReviewSource.CUSTOMER,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

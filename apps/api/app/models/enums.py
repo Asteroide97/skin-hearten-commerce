@@ -41,6 +41,18 @@ class CouponType(StrEnum):
     FREE_SHIPPING = "free_shipping"
 
 
+class ProductReviewStatus(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class ProductReviewSource(StrEnum):
+    CUSTOMER = "customer"
+    IMPORTED = "imported"
+    ADMIN = "admin"
+
+
 class CRMLifecycleStatus(StrEnum):
     LEAD = "lead"
     CUSTOMER = "customer"

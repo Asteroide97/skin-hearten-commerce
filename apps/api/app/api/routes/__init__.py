@@ -1,4 +1,5 @@
 from app.api.routes import (
+    admin_reviews,
     admin_imports,
     admin_crm,
     admin_brands,
@@ -17,6 +18,7 @@ from app.api.routes import (
     health,
     orders,
     payments,
+    product_reviews,
     products,
     skin_quiz,
 )
@@ -28,6 +30,7 @@ __all__ = [
     "admin_imports",
     "admin_orders",
     "admin_products",
+    "admin_reviews",
     "admin_skin_quiz_analytics",
     "admin_skin_quiz_leads",
     "auth",
@@ -40,6 +43,7 @@ __all__ = [
     "health",
     "orders",
     "payments",
+    "product_reviews",
     "products",
     "skin_quiz",
 ]

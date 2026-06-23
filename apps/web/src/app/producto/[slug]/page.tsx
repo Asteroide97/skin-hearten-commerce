@@ -4,8 +4,11 @@ import { notFound } from "next/navigation";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { AddToCartButton } from "@/components/store/add-to-cart-button";
 import { ProductCard } from "@/components/store/product-card";
+import { ProductReviewsSection } from "@/components/store/product-reviews-section";
 import { ProductViewTracker } from "@/components/store/product-view-tracker";
 import { formatCurrency } from "@/lib/format";
+import { createEmptyProductReviewSummary } from "@/lib/product-reviews";
+import { getProductReviews } from "@/lib/product-reviews-api";
 import { getProductBySlug, getProducts } from "@/lib/storefront-api";
 
 type ProductDetailPageProps = {
@@ -30,11 +33,19 @@ export async function generateMetadata({ params }: ProductDetailPageProps): Prom
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { slug } = await params;
-  const [product, products] = await Promise.all([getProductBySlug(slug), getProducts()]);
+  const [product, products, reviewResult] = await Promise.all([
+    getProductBySlug(slug),
+    getProducts(),
+    getProductReviews(slug),
+  ]);
 
   if (!product) {
     notFound();
   }
+
+  const reviewSummary = reviewResult.ok
+    ? reviewResult.data
+    : createEmptyProductReviewSummary(Number(product.id));
 
   const related = products
     .filter((entry) => entry.category === product.category && entry.id !== product.id)
@@ -134,6 +145,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           ))}
         </div>
       </section>
+
+      <ProductReviewsSection
+        initialSummary={reviewSummary}
+        productName={product.name}
+        productRef={product.slug}
+      />
 
       <section className="space-y-6">
         <SectionHeading title="Productos relacionados" />
