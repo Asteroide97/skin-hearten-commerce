@@ -5,16 +5,23 @@ from sqlalchemy import inspect
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.db.session import SessionLocal
-from app.models import Role, User
+from app.models import Base, Role, User
 from app.models.enums import RoleName
 
 
 def main() -> None:
     with SessionLocal() as db:
-        inspector = inspect(db.bind)
         required_tables = {"roles", "users"}
-        if not required_tables.issubset(set(inspector.get_table_names())):
-            raise SystemExit("Run 'alembic upgrade head' before seeding the admin user.")
+        inspector = inspect(db.bind)
+        existing_tables = set(inspector.get_table_names())
+        if not required_tables.issubset(existing_tables):
+            Base.metadata.create_all(
+                bind=db.bind,
+                tables=[
+                    Role.__table__,
+                    User.__table__,
+                ],
+            )
 
         role = db.query(Role).filter(Role.name == RoleName.SUPERADMIN.value).first()
         if not role:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import inspect
 
 from app.db.session import SessionLocal
-from app.models import Brand, Category, Coupon, Product, ProductImage
+from app.models import Base, Brand, Category, Coupon, Product, ProductImage
 from app.models.enums import CouponType
 from app.services.mock_store import BRANDS, CATEGORIES, PRODUCTS
 
@@ -62,10 +62,20 @@ def _join_text_list(values: list[str] | None) -> str | None:
 
 def main() -> None:
     with SessionLocal() as db:
-        inspector = inspect(db.bind)
         required_tables = {"brands", "categories", "products", "product_images", "coupons"}
-        if not required_tables.issubset(set(inspector.get_table_names())):
-            raise SystemExit("Run 'alembic upgrade head' before seeding the catalog.")
+        inspector = inspect(db.bind)
+        existing_tables = set(inspector.get_table_names())
+        if not required_tables.issubset(existing_tables):
+            Base.metadata.create_all(
+                bind=db.bind,
+                tables=[
+                    Brand.__table__,
+                    Category.__table__,
+                    Product.__table__,
+                    ProductImage.__table__,
+                    Coupon.__table__,
+                ],
+            )
 
         brand_map: dict[int, Brand] = {}
         category_map: dict[int, Category] = {}

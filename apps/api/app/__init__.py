@@ -1,4 +1,7 @@
-from app.main import app
+"""Skin Hearten API package.
 
-__all__ = ["app"]
+Keep package import side-effect free so Alembic and seed scripts can import
+models/config without initializing the FastAPI application.
+"""
 
+__all__: list[str] = []
