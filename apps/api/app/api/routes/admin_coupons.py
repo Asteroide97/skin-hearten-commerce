@@ -3,10 +3,16 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_admin, get_db
 from app.schemas.common import MessageResponse
-from app.schemas.coupon import AdminCouponCreate, AdminCouponRead, AdminCouponUpdate
+from app.schemas.coupon import (
+    AdminCouponCreate,
+    AdminCouponDuplicateRequest,
+    AdminCouponRead,
+    AdminCouponUpdate,
+)
 from app.services.coupon_engine import (
     create_admin_coupon,
     delete_admin_coupon,
+    duplicate_admin_coupon,
     get_admin_coupon,
     list_admin_coupons,
     update_admin_coupon,
@@ -41,6 +47,19 @@ def get_coupon_admin(
     db: Session = Depends(get_db),
 ) -> AdminCouponRead:
     coupon = get_admin_coupon(db, coupon_id)
+    if not coupon:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coupon not found")
+    return AdminCouponRead.model_validate(coupon)
+
+
+@router.post("/{coupon_id}/duplicate", response_model=AdminCouponRead, status_code=status.HTTP_201_CREATED)
+def duplicate_coupon_admin(
+    coupon_id: int,
+    payload: AdminCouponDuplicateRequest,
+    _: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> AdminCouponRead:
+    coupon = duplicate_admin_coupon(db, coupon_id, payload)
     if not coupon:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Coupon not found")
     return AdminCouponRead.model_validate(coupon)

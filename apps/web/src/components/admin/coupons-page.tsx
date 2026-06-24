@@ -373,6 +373,46 @@ export function CouponsPage() {
     }
   }
 
+  async function handleDuplicate(coupon: AdminCoupon) {
+    const newCode = window.prompt("Nuevo codigo para duplicar el cupon", `${coupon.code}-COPY`);
+    if (!newCode || !newCode.trim()) {
+      return;
+    }
+
+    setPageNotice(null);
+    setDrawerNotice(null);
+
+    try {
+      const response = await fetch(`/api/admin/coupons/${coupon.id}/duplicate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code: newCode.trim().toUpperCase() }),
+      });
+      const result = (await response.json()) as CouponMutationResponse;
+
+      if (!response.ok || !result.ok) {
+        setPageNotice({
+          kind: "error",
+          message: "No pudimos duplicar el cupon. Revisa que el nuevo codigo no exista.",
+        });
+        return;
+      }
+
+      mergeCoupon(result.data);
+      setPageNotice({
+        kind: "success",
+        message: `Se duplico ${coupon.code} como ${result.data.code}.`,
+      });
+    } catch {
+      setPageNotice({
+        kind: "error",
+        message: "No pudimos duplicar el cupon por ahora.",
+      });
+    }
+  }
+
   return (
     <>
       <div className="space-y-6">
@@ -454,9 +494,11 @@ export function CouponsPage() {
                           </p>
                         </td>
                         <td className="px-4 py-4">
-                          <p className="font-medium text-stone-900">{coupon.usageCount} usos</p>
+                          <p className="font-medium text-stone-900">
+                            {coupon.usageCount} / {coupon.usageLimit ?? "Ilimitado"}
+                          </p>
                           <p className="mt-1 text-xs text-stone-500">
-                            {coupon.usageLimit === null ? "Sin limite total" : `${coupon.usageLimit} maximo`}
+                            {coupon.usageLimit === null ? "Sin limite total" : "uso total permitido"}
                           </p>
                         </td>
                         <td className="px-4 py-4">
@@ -471,13 +513,24 @@ export function CouponsPage() {
                           <p>{coupon.endsAt ? formatDateTime(coupon.endsAt) : "Sin fin"}</p>
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <button
-                            className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700"
-                            onClick={() => openEditDrawer(coupon.id)}
-                            type="button"
-                          >
-                            Editar
-                          </button>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700"
+                              onClick={() => {
+                                void handleDuplicate(coupon);
+                              }}
+                              type="button"
+                            >
+                              Duplicar
+                            </button>
+                            <button
+                              className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700"
+                              onClick={() => openEditDrawer(coupon.id)}
+                              type="button"
+                            >
+                              Editar
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -630,6 +683,17 @@ export function CouponsPage() {
               >
                 {isSaving ? "Guardando..." : drawerMode === "create" ? "Crear cupon" : "Guardar cambios"}
               </button>
+              {drawerMode === "edit" && activeCoupon ? (
+                <button
+                  className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-700"
+                  onClick={() => {
+                    void handleDuplicate(activeCoupon);
+                  }}
+                  type="button"
+                >
+                  Duplicar
+                </button>
+              ) : null}
               {drawerMode === "edit" && activeCoupon ? (
                 <button
                   className="rounded-full border border-stone-300 px-5 py-3 text-sm font-medium text-stone-700 disabled:opacity-60"

@@ -64,6 +64,12 @@ python scripts/seed_catalog.py
 
 Los scripts son idempotentes. `seed_admin.py` no imprime la password.
 
+`seed_catalog.py` tambien crea estos cupones demo persistentes:
+
+- `GLOW10`: 10% de descuento, activo, subtotal minimo `500`
+- `ENVIOGRATIS`: envio gratis, activo, subtotal minimo `1200`
+- `BIENVENIDA15`: 15% de descuento, activo, `usage_limit=500`, `per_customer_limit=1`
+
 ## Health checks
 
 Prueba la API:
@@ -194,3 +200,49 @@ SKIN_HEARTEN_ADMIN_PASSWORD=la-misma-credencial-admin
 ```
 
 Luego redeploya el storefront. El frontend quedara apuntando al backend real mediante `NEXT_PUBLIC_API_URL`.
+
+## Pruebas manuales de cupones
+
+1. Cupon valido
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/coupons/validate \
+  -H "Content-Type: application/json" \
+  -d "{\"code\":\"GLOW10\",\"subtotal\":900,\"items\":[{\"productId\":\"1\",\"slug\":\"serum-renovador-peptidos\",\"name\":\"Serum Renovador Peptidos\",\"quantity\":1,\"unitPrice\":900}]}"
+```
+
+Esperado: `valid=true`, `reasonCode=valid`, `discountAmount=90`.
+
+2. Subtotal insuficiente
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/coupons/validate \
+  -H "Content-Type: application/json" \
+  -d "{\"code\":\"ENVIOGRATIS\",\"subtotal\":800,\"items\":[]}"
+```
+
+Esperado: `valid=false`, `reasonCode=subtotal_too_low`.
+
+3. Cupon expirado
+
+Actualiza un cupon desde `/admin/cupones` o por API con `endsAt` a una fecha pasada y luego repite `POST /coupons/validate`.
+
+Esperado: `valid=false`, `reasonCode=expired`.
+
+4. Límite total de uso
+
+Configura un cupon con `usageLimit=1`, completa un checkout valido y vuelve a validarlo.
+
+Esperado: `valid=false`, `reasonCode=usage_limit_reached`.
+
+5. Límite por clienta
+
+Usa `BIENVENIDA15` en una orden con el mismo `customerEmail` o `customerPhone` y luego intenta otra validacion para la misma clienta.
+
+Esperado: `valid=false`, `reasonCode=per_customer_limit_reached`.
+
+6. Envio gratis
+
+Completa un checkout con `ENVIOGRATIS` y subtotal mayor o igual a `1200`.
+
+Esperado: `freeShipping=true`, `discountAmount=0`, `shipping=0` en checkout.

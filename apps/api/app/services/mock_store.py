@@ -405,7 +405,7 @@ COUPONS = [
         "description": "10% de descuento en tu rutina.",
         "discount_type": "percentage",
         "discount_value": 10.0,
-        "min_subtotal": None,
+        "min_subtotal": 500.0,
         "max_discount": None,
         "starts_at": None,
         "ends_at": None,
@@ -423,13 +423,31 @@ COUPONS = [
         "description": "El envio corre por nuestra cuenta.",
         "discount_type": "free_shipping",
         "discount_value": 0.0,
-        "min_subtotal": None,
+        "min_subtotal": 1200.0,
         "max_discount": None,
         "starts_at": None,
         "ends_at": None,
         "usage_limit": None,
         "usage_count": 0,
         "per_customer_limit": None,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    },
+    {
+        "id": 3,
+        "code": "BIENVENIDA15",
+        "name": "Bienvenida 15",
+        "description": "15% de descuento para primeras compras.",
+        "discount_type": "percentage",
+        "discount_value": 15.0,
+        "min_subtotal": None,
+        "max_discount": None,
+        "starts_at": None,
+        "ends_at": None,
+        "usage_limit": 500,
+        "usage_count": 0,
+        "per_customer_limit": 1,
         "is_active": True,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
@@ -815,6 +833,17 @@ def get_order_by_number(order_number: str) -> dict | None:
     return next((deepcopy(order) for order in ORDERS if order["order_number"] == order_number), None)
 
 
+def get_order_by_checkout_idempotency_key(idempotency_key: str) -> dict | None:
+    return next(
+        (
+            deepcopy(order)
+            for order in ORDERS
+            if str(order.get("checkout_idempotency_key") or "").strip() == idempotency_key
+        ),
+        None,
+    )
+
+
 def get_next_order_id() -> int:
     return max(entry["id"] for entry in ORDERS) + 1 if ORDERS else 1
 
@@ -956,6 +985,19 @@ def list_coupon_redemptions(
 
 
 def create_coupon_redemption(payload: dict) -> dict:
+    idempotency_key = payload.get("idempotency_key")
+    if isinstance(idempotency_key, str) and idempotency_key.strip():
+        existing = next(
+            (
+                entry
+                for entry in COUPON_REDEMPTIONS
+                if str(entry.get("idempotency_key") or "").strip() == idempotency_key.strip()
+            ),
+            None,
+        )
+        if existing:
+            return deepcopy(existing)
+
     next_id = max(entry["id"] for entry in COUPON_REDEMPTIONS) + 1 if COUPON_REDEMPTIONS else 1
     redemption = {
         "id": next_id,
@@ -964,6 +1006,7 @@ def create_coupon_redemption(payload: dict) -> dict:
         "customer_email": _normalize_email(payload.get("customer_email")),
         "customer_phone": _normalize_phone(payload.get("customer_phone")),
         "discount_amount": float(payload.get("discount_amount") or 0),
+        "idempotency_key": idempotency_key.strip() if isinstance(idempotency_key, str) and idempotency_key.strip() else None,
         "created_at": payload.get("created_at") or datetime.now(timezone.utc),
     }
     COUPON_REDEMPTIONS.append(redemption)

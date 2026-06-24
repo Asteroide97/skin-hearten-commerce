@@ -20,6 +20,15 @@ export type CouponValidationResponse = {
   discountType: "percentage" | "fixed_amount" | "free_shipping" | null;
   discountAmount: number;
   freeShipping: boolean;
+  reasonCode:
+    | "invalid_code"
+    | "inactive"
+    | "not_started"
+    | "expired"
+    | "usage_limit_reached"
+    | "per_customer_limit_reached"
+    | "subtotal_too_low"
+    | "valid";
   message: string;
 };
 
@@ -48,6 +57,7 @@ function isCouponValidationResponse(value: unknown): value is CouponValidationRe
     (candidate.discountType === null || typeof candidate.discountType === "string") &&
     typeof candidate.discountAmount === "number" &&
     typeof candidate.freeShipping === "boolean" &&
+    typeof candidate.reasonCode === "string" &&
     typeof candidate.message === "string"
   );
 }
@@ -63,29 +73,68 @@ function buildLocalCouponValidation(payload: CouponValidationRequest): CouponVal
       discountType: null,
       discountAmount: 0,
       freeShipping: false,
+      reasonCode: "invalid_code",
       message: "Ingresa un codigo de cupon.",
     };
   }
 
-  if (normalizedCode === "GLOW10") {
+  if (normalizedCode === "GLOW10" && subtotal >= 500) {
     return {
       valid: true,
       code: normalizedCode,
       discountType: "percentage",
       discountAmount: Number((subtotal * 0.1).toFixed(2)),
       freeShipping: false,
+      reasonCode: "valid",
       message: "Cupon aplicado correctamente.",
     };
   }
 
-  if (normalizedCode === "ENVIOGRATIS") {
+  if (normalizedCode === "GLOW10") {
+    return {
+      valid: false,
+      code: normalizedCode,
+      discountType: null,
+      discountAmount: 0,
+      freeShipping: false,
+      reasonCode: "subtotal_too_low",
+      message: "Este cupon requiere un subtotal minimo de $500.00.",
+    };
+  }
+
+  if (normalizedCode === "ENVIOGRATIS" && subtotal >= 1200) {
     return {
       valid: true,
       code: normalizedCode,
       discountType: "free_shipping",
       discountAmount: 0,
       freeShipping: true,
+      reasonCode: "valid",
       message: "Envio gratis aplicado.",
+    };
+  }
+
+  if (normalizedCode === "ENVIOGRATIS") {
+    return {
+      valid: false,
+      code: normalizedCode,
+      discountType: null,
+      discountAmount: 0,
+      freeShipping: false,
+      reasonCode: "subtotal_too_low",
+      message: "Este cupon requiere un subtotal minimo de $1200.00.",
+    };
+  }
+
+  if (normalizedCode === "BIENVENIDA15") {
+    return {
+      valid: true,
+      code: normalizedCode,
+      discountType: "percentage",
+      discountAmount: Number((subtotal * 0.15).toFixed(2)),
+      freeShipping: false,
+      reasonCode: "valid",
+      message: "Cupon aplicado correctamente.",
     };
   }
 
@@ -95,6 +144,7 @@ function buildLocalCouponValidation(payload: CouponValidationRequest): CouponVal
     discountType: null,
     discountAmount: 0,
     freeShipping: false,
+    reasonCode: "invalid_code",
     message: "Cupon invalido.",
   };
 }

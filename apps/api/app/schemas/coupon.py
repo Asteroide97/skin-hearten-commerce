@@ -31,6 +31,7 @@ class CouponValidateResponse(CouponSchema):
     discount_type: str | None = Field(default=None, serialization_alias="discountType")
     discount_amount: float = Field(serialization_alias="discountAmount")
     free_shipping: bool = Field(serialization_alias="freeShipping")
+    reason_code: str = Field(serialization_alias="reasonCode")
     message: str
 
 
@@ -133,3 +134,12 @@ class AdminCouponUpdate(CouponSchema):
         if self.discount_type == "percentage" and self.discount_value is not None and self.discount_value > 100:
             raise ValueError("Percentage discounts cannot exceed 100")
         return self
+
+
+class AdminCouponDuplicateRequest(CouponSchema):
+    code: str = Field(min_length=2, max_length=80)
+
+    @field_validator("code")
+    @classmethod
+    def normalize_duplicate_code(cls, value: str) -> str:
+        return value.strip().upper()

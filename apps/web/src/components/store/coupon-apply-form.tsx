@@ -18,6 +18,28 @@ type Notice =
     }
   | null;
 
+function getReasonMessage(reasonCode: string, fallbackMessage: string) {
+  switch (reasonCode) {
+    case "inactive":
+      return "Este cupon ya no esta activo.";
+    case "not_started":
+      return "Este cupon aun no esta disponible.";
+    case "expired":
+      return "Este cupon ya expiro.";
+    case "usage_limit_reached":
+      return "Este cupon ya alcanzo su limite de uso.";
+    case "per_customer_limit_reached":
+      return "Ya usaste el limite permitido para este cupon.";
+    case "subtotal_too_low":
+      return fallbackMessage;
+    case "invalid_code":
+      return "El codigo no es valido.";
+    case "valid":
+    default:
+      return fallbackMessage;
+  }
+}
+
 export function CouponApplyForm({ customerEmail, customerPhone }: CouponApplyFormProps) {
   const { items, coupon, setCoupon, clearCoupon } = useCartStore();
   const subtotal = useMemo(
@@ -80,7 +102,7 @@ export function CouponApplyForm({ customerEmail, customerPhone }: CouponApplyFor
       clearCoupon();
       setNotice({
         kind: "error",
-        message: result.data.message,
+        message: getReasonMessage(result.data.reasonCode, result.data.message),
       });
       setIsApplying(false);
       return;
@@ -96,7 +118,7 @@ export function CouponApplyForm({ customerEmail, customerPhone }: CouponApplyFor
     setCouponInput(result.data.code);
     setNotice({
       kind: "success",
-      message: result.data.message,
+      message: getReasonMessage(result.data.reasonCode, result.data.message),
     });
     setIsApplying(false);
   }

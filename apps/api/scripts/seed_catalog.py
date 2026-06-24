@@ -3,8 +3,54 @@ from __future__ import annotations
 from sqlalchemy import inspect
 
 from app.db.session import SessionLocal
-from app.models import Brand, Category, Product, ProductImage
+from app.models import Brand, Category, Coupon, Product, ProductImage
+from app.models.enums import CouponType
 from app.services.mock_store import BRANDS, CATEGORIES, PRODUCTS
+
+COUPON_SEED_DATA = [
+    {
+        "code": "GLOW10",
+        "name": "Glow 10",
+        "description": "10% de descuento en tu rutina.",
+        "discount_type": CouponType.PERCENTAGE,
+        "discount_value": 10.0,
+        "min_subtotal": 500.0,
+        "max_discount": None,
+        "starts_at": None,
+        "ends_at": None,
+        "usage_limit": None,
+        "per_customer_limit": None,
+        "is_active": True,
+    },
+    {
+        "code": "ENVIOGRATIS",
+        "name": "Envio Gratis",
+        "description": "Envio gratis en pedidos seleccionados.",
+        "discount_type": CouponType.FREE_SHIPPING,
+        "discount_value": 0.0,
+        "min_subtotal": 1200.0,
+        "max_discount": None,
+        "starts_at": None,
+        "ends_at": None,
+        "usage_limit": None,
+        "per_customer_limit": None,
+        "is_active": True,
+    },
+    {
+        "code": "BIENVENIDA15",
+        "name": "Bienvenida 15",
+        "description": "15% de descuento para primeras compras.",
+        "discount_type": CouponType.PERCENTAGE,
+        "discount_value": 15.0,
+        "min_subtotal": None,
+        "max_discount": None,
+        "starts_at": None,
+        "ends_at": None,
+        "usage_limit": 500,
+        "per_customer_limit": 1,
+        "is_active": True,
+    },
+]
 
 
 def _join_text_list(values: list[str] | None) -> str | None:
@@ -17,7 +63,7 @@ def _join_text_list(values: list[str] | None) -> str | None:
 def main() -> None:
     with SessionLocal() as db:
         inspector = inspect(db.bind)
-        required_tables = {"brands", "categories", "products", "product_images"}
+        required_tables = {"brands", "categories", "products", "product_images", "coupons"}
         if not required_tables.issubset(set(inspector.get_table_names())):
             raise SystemExit("Run 'alembic upgrade head' before seeding the catalog.")
 
@@ -26,6 +72,7 @@ def main() -> None:
         created_brands = 0
         created_categories = 0
         created_products = 0
+        created_coupons = 0
 
         for entry in BRANDS:
             brand = db.query(Brand).filter(Brand.slug == entry["slug"]).first()
@@ -118,12 +165,47 @@ def main() -> None:
                     )
                 )
 
+        for entry in COUPON_SEED_DATA:
+            coupon = db.query(Coupon).filter(Coupon.code == entry["code"]).first()
+            if not coupon:
+                coupon = Coupon(
+                    code=entry["code"],
+                    name=entry["name"],
+                    description=entry["description"],
+                    discount_type=entry["discount_type"],
+                    discount_value=entry["discount_value"],
+                    min_subtotal=entry["min_subtotal"],
+                    max_discount=entry["max_discount"],
+                    starts_at=entry["starts_at"],
+                    ends_at=entry["ends_at"],
+                    usage_limit=entry["usage_limit"],
+                    usage_count=0,
+                    per_customer_limit=entry["per_customer_limit"],
+                    is_active=entry["is_active"],
+                )
+                db.add(coupon)
+                created_coupons += 1
+            else:
+                coupon.name = entry["name"]
+                coupon.description = entry["description"]
+                coupon.discount_type = entry["discount_type"]
+                coupon.discount_value = entry["discount_value"]
+                coupon.min_subtotal = entry["min_subtotal"]
+                coupon.max_discount = entry["max_discount"]
+                coupon.starts_at = entry["starts_at"]
+                coupon.ends_at = entry["ends_at"]
+                coupon.usage_limit = entry["usage_limit"]
+                coupon.per_customer_limit = entry["per_customer_limit"]
+                coupon.is_active = entry["is_active"]
+                db.add(coupon)
+
         db.commit()
         print(
             "Catalog seed completed: "
             f"{created_brands} brands created, "
             f"{created_categories} categories created, "
-            f"{created_products} products created."
+            f"{created_products} products created, "
+            f"{created_coupons} coupons created."
         )
 
 

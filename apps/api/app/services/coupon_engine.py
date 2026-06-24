@@ -13,6 +13,7 @@ from app.models import Coupon, CouponRedemption
 from app.models.enums import CouponType
 from app.schemas.coupon import (
     AdminCouponCreate,
+    AdminCouponDuplicateRequest,
     AdminCouponUpdate,
     CouponValidateRequest,
 )
@@ -36,6 +37,7 @@ class CouponEvaluation:
     valid: bool
     code: str | None
     message: str
+    reason_code: str
     discount_type: str | None = None
     discount_amount: float = 0.0
     free_shipping: bool = False
@@ -135,6 +137,7 @@ def _build_response_payload(result: CouponEvaluation) -> dict[str, Any]:
         "discount_type": result.discount_type,
         "discount_amount": _round_money(result.discount_amount),
         "free_shipping": result.free_shipping,
+        "reason_code": result.reason_code,
         "message": result.message,
     }
 
@@ -198,24 +201,46 @@ def _evaluate_serialized_coupon(
     max_discount = _to_float(coupon.get("max_discount"))
 
     if not bool(coupon.get("is_active", True)):
-        return CouponEvaluation(valid=False, code=coupon["code"], message="Este cupon no esta activo.")
+        return CouponEvaluation(
+            valid=False,
+            code=coupon["code"],
+            message="Este cupon no esta activo.",
+            reason_code="inactive",
+        )
     if starts_at and starts_at > now:
-        return CouponEvaluation(valid=False, code=coupon["code"], message="Este cupon aun no esta disponible.")
+        return CouponEvaluation(
+            valid=False,
+            code=coupon["code"],
+            message="Este cupon aun no esta disponible.",
+            reason_code="not_started",
+        )
     if ends_at and ends_at < now:
-        return CouponEvaluation(valid=False, code=coupon["code"], message="Este cupon ya expiro.")
+        return CouponEvaluation(
+            valid=False,
+            code=coupon["code"],
+            message="Este cupon ya expiro.",
+            reason_code="expired",
+        )
     if subtotal < min_subtotal:
         return CouponEvaluation(
             valid=False,
             code=coupon["code"],
             message=f"Este cupon requiere un subtotal minimo de ${min_subtotal:.2f}.",
+            reason_code="subtotal_too_low",
         )
     if usage_limit is not None and usage_count >= int(usage_limit):
-        return CouponEvaluation(valid=False, code=coupon["code"], message="Este cupon ya alcanzo su limite de uso.")
+        return CouponEvaluation(
+            valid=False,
+            code=coupon["code"],
+            message="Este cupon ya alcanzo su limite de uso.",
+            reason_code="usage_limit_reached",
+        )
     if per_customer_limit is not None and customer_redemptions >= int(per_customer_limit):
         return CouponEvaluation(
             valid=False,
             code=coupon["code"],
             message="Ya agotaste el limite permitido para este cupon.",
+            reason_code="per_customer_limit_reached",
         )
 
     discount_amount = 0.0
@@ -228,7 +253,12 @@ def _evaluate_serialized_coupon(
     elif discount_type == "free_shipping":
         free_shipping = True
     else:
-        return CouponEvaluation(valid=False, code=coupon["code"], message="Tipo de cupon no soportado.")
+        return CouponEvaluation(
+            valid=False,
+            code=coupon["code"],
+            message="Tipo de cupon no soportado.",
+            reason_code="invalid_code",
+        )
 
     if max_discount is not None:
         discount_amount = min(discount_amount, max_discount)
@@ -239,6 +269,7 @@ def _evaluate_serialized_coupon(
         valid=True,
         code=coupon["code"],
         message="Envio gratis aplicado." if free_shipping else "Cupon aplicado correctamente.",
+        reason_code="valid",
         discount_type=discount_type,
         discount_amount=discount_amount,
         free_shipping=free_shipping,
@@ -257,7 +288,12 @@ def evaluate_coupon_code(
 ) -> CouponEvaluation:
     normalized_code = _normalize_code(code)
     if not normalized_code:
-        return CouponEvaluation(valid=False, code=None, message="Ingresa un codigo de cupon.")
+        return CouponEvaluation(
+            valid=False,
+            code=None,
+            message="Ingresa un codigo de cupon.",
+            reason_code="invalid_code",
+        )
 
     normalized_email = _normalize_email(customer_email)
     normalized_phone = _normalize_phone(customer_phone)
@@ -287,13 +323,23 @@ def evaluate_coupon_code(
 
         has_db_coupons = db.query(Coupon.id).first() is not None
         if has_db_coupons:
-            return CouponEvaluation(valid=False, code=normalized_code, message="Cupon invalido.")
+            return CouponEvaluation(
+                valid=False,
+                code=normalized_code,
+                message="Cupon invalido.",
+                reason_code="invalid_code",
+            )
     except SQLAlchemyError:
         db.rollback()
 
     coupon = get_mock_coupon_by_code(normalized_code)
     if not coupon:
-        return CouponEvaluation(valid=False, code=normalized_code, message="Cupon invalido.")
+        return CouponEvaluation(
+            valid=False,
+            code=normalized_code,
+            message="Cupon invalido.",
+            reason_code="invalid_code",
+        )
 
     serialized = _serialize_coupon(coupon)
     customer_redemptions = _count_mock_customer_redemptions(
@@ -330,10 +376,11 @@ def apply_coupon_to_order(
     customer_email: str | None,
     customer_phone: str | None,
     order_id: int | None,
+    idempotency_key: str | None = None,
 ) -> CouponEvaluation:
     normalized_code = _normalize_code(code)
     if not normalized_code:
-        return CouponEvaluation(valid=True, code=None, message="No coupon applied.")
+        return CouponEvaluation(valid=True, code=None, message="No coupon applied.", reason_code="valid")
 
     result = evaluate_coupon_code(
         db,
@@ -346,6 +393,14 @@ def apply_coupon_to_order(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result.message)
 
     if result.source == "db" and result.coupon_id is not None:
+        if idempotency_key:
+            existing_redemption = (
+                db.query(CouponRedemption)
+                .filter(CouponRedemption.idempotency_key == idempotency_key)
+                .first()
+            )
+            if existing_redemption:
+                return result
         coupon = db.query(Coupon).filter(Coupon.id == result.coupon_id).first()
         if not coupon:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No pudimos aplicar el cupon.")
@@ -358,6 +413,7 @@ def apply_coupon_to_order(
                 customer_email=_normalize_email(customer_email),
                 customer_phone=_normalize_phone(customer_phone),
                 discount_amount=result.discount_amount,
+                idempotency_key=idempotency_key,
             )
         )
         return result
@@ -370,6 +426,7 @@ def apply_coupon_to_order(
                 "customer_email": customer_email,
                 "customer_phone": customer_phone,
                 "discount_amount": result.discount_amount,
+                "idempotency_key": idempotency_key,
             }
         )
 
@@ -385,6 +442,7 @@ def calculate_checkout_totals(
     customer_phone: str | None,
     order_id: int | None = None,
     persist_redemption: bool = False,
+    idempotency_key: str | None = None,
 ) -> tuple[float, float, str | None]:
     shipping_total = _base_shipping_total(subtotal)
     if not coupon_code:
@@ -398,6 +456,7 @@ def calculate_checkout_totals(
             customer_email=customer_email,
             customer_phone=customer_phone,
             order_id=order_id,
+            idempotency_key=idempotency_key,
         )
         if persist_redemption
         else evaluate_coupon_code(
@@ -418,7 +477,7 @@ def calculate_checkout_totals(
 
 
 def _prepare_coupon_payload(
-    payload: AdminCouponCreate | AdminCouponUpdate,
+    payload: AdminCouponCreate | AdminCouponUpdate | AdminCouponDuplicateRequest,
     *,
     existing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -508,6 +567,63 @@ def create_admin_coupon(db: Session, payload: AdminCouponCreate) -> dict[str, An
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ya existe un cupon con ese codigo.")
     return _serialize_coupon(create_mock_coupon(prepared))
+
+
+def duplicate_admin_coupon(db: Session, coupon_id: int, payload: AdminCouponDuplicateRequest) -> dict[str, Any] | None:
+    new_code = _normalize_code(payload.code)
+    if not new_code:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El nuevo codigo es obligatorio.")
+
+    try:
+        coupon = db.query(Coupon).filter(Coupon.id == coupon_id).first()
+        if coupon:
+            duplicate = db.query(Coupon).filter(func.upper(Coupon.code) == new_code).first()
+            if duplicate:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ya existe un cupon con ese codigo.")
+
+            duplicated_coupon = Coupon(
+                code=new_code,
+                name=coupon.name,
+                description=coupon.description,
+                discount_type=coupon.discount_type,
+                discount_value=coupon.discount_value,
+                min_subtotal=coupon.min_subtotal,
+                max_discount=coupon.max_discount,
+                starts_at=coupon.starts_at,
+                ends_at=coupon.ends_at,
+                usage_limit=coupon.usage_limit,
+                usage_count=0,
+                per_customer_limit=coupon.per_customer_limit,
+                is_active=coupon.is_active,
+            )
+            db.add(duplicated_coupon)
+            db.commit()
+            db.refresh(duplicated_coupon)
+            return _serialize_coupon(duplicated_coupon)
+
+        has_db_coupons = db.query(Coupon.id).first() is not None
+        if has_db_coupons:
+            return None
+    except HTTPException:
+        raise
+    except SQLAlchemyError:
+        db.rollback()
+
+    existing_mock = get_mock_coupon(coupon_id)
+    if not existing_mock:
+        return None
+    duplicate_mock = get_mock_coupon_by_code(new_code)
+    if duplicate_mock:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ya existe un cupon con ese codigo.")
+
+    duplicated = create_mock_coupon(
+        {
+            **_serialize_coupon(existing_mock),
+            "code": new_code,
+            "usage_count": 0,
+        }
+    )
+    return _serialize_coupon(duplicated)
 
 
 def update_admin_coupon(db: Session, coupon_id: int, payload: AdminCouponUpdate) -> dict[str, Any] | None:

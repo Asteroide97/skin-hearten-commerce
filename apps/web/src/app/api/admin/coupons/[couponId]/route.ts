@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { deleteAdminCoupon, getAdminCoupon, updateAdminCoupon } from "@/lib/admin-coupons-api";
+import {
+  deleteAdminCoupon,
+  getAdminCoupon,
+  updateAdminCoupon,
+} from "@/lib/admin-coupons-api";
 import type { AdminCouponUpdateInput } from "@/lib/admin-coupons";
 
 type RouteContext = {

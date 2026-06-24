@@ -130,3 +130,10 @@ export async function deleteAdminCoupon(couponId: number) {
     method: "DELETE",
   });
 }
+
+export async function duplicateAdminCoupon(couponId: number, code: string) {
+  return requestAdminJson<AdminCoupon>(`/admin/coupons/${couponId}/duplicate`, {
+    body: { code },
+    method: "POST",
+  });
+}

@@ -186,6 +186,60 @@ def _serialize_shipping_address(payload: CheckoutRequest) -> str:
     )
 
 
+def _extract_payment_checkout_url(payment: Payment | None) -> str | None:
+    if not payment or not isinstance(payment.raw_payload_json, dict):
+        return None
+
+    raw_payload = payment.raw_payload_json
+    for key in ["url", "checkout_url", "init_point", "sandbox_init_point"]:
+        value = raw_payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _build_checkout_next_action(payment: Payment | None) -> CheckoutNextAction:
+    if payment and payment.status == PaymentStatus.PENDING:
+        checkout_url = _extract_payment_checkout_url(payment)
+        if payment.provider in {PaymentProvider.STRIPE, PaymentProvider.MERCADOPAGO} and checkout_url:
+            return CheckoutNextAction(
+                type="redirect",
+                provider=str(payment.provider),
+                url=checkout_url,
+            )
+    return CheckoutNextAction(type="show_order_confirmation", provider="mock")
+
+
+def _build_db_checkout_response_from_existing_order(
+    db: Session,
+    *,
+    idempotency_key: str,
+) -> CheckoutResponse | None:
+    try:
+        order = db.query(Order).filter(Order.checkout_idempotency_key == idempotency_key).first()
+        if not order:
+            return None
+
+        payment = db.query(Payment).filter(Payment.order_id == order.id).first()
+        next_action = _build_checkout_next_action(payment)
+        return CheckoutResponse.model_validate(
+            {
+                "order_id": int(order.id),
+                "order_number": order.order_number,
+                "status": str(order.status),
+                "payment_status": str(payment.status) if payment else "pending",
+                "subtotal": round(float(order.subtotal or 0), 2),
+                "discount": round(float(order.discount_total or 0), 2),
+                "shipping": round(float(order.shipping_total or 0), 2),
+                "total": round(float(order.grand_total or 0), 2),
+                "next_action": next_action.model_dump(),
+            }
+        )
+    except SQLAlchemyError:
+        db.rollback()
+        return None
+
+
 def create_mock_checkout_order(
     db: Session,
     payload: CheckoutRequest,
@@ -232,6 +286,7 @@ def create_mock_checkout_order(
             "discount_total": discount_total,
             "shipping_total": shipping_total,
             "grand_total": grand_total,
+            "coupon_discount_amount": discount_total if normalized_coupon_code else 0.0,
             "payment_provider": payload.payment_method,
             "payment_status": payment_status,
             "items": [
@@ -244,6 +299,7 @@ def create_mock_checkout_order(
                 for item in resolved_items
             ],
             "coupon_code": normalized_coupon_code,
+            "checkout_idempotency_key": idempotency_key,
             "customer_email": customer["email"],
             "shipping_name": f"{payload.customer.first_name} {payload.customer.last_name}",
             "shipping_phone": payload.customer.phone,
@@ -287,6 +343,7 @@ def create_mock_checkout_order(
             customer_phone=payload.customer.phone,
             order_id=order["id"],
             persist_redemption=True,
+            idempotency_key=idempotency_key,
         )
 
     for item in resolved_items:
@@ -335,6 +392,14 @@ def create_checkout_order(
     if payload.payment_method == "mock":
         return create_mock_checkout_order(db, payload, idempotency_key=idempotency_key)
 
+    if idempotency_key:
+        existing_order_response = _build_db_checkout_response_from_existing_order(
+            db,
+            idempotency_key=idempotency_key,
+        )
+        if existing_order_response:
+            return existing_order_response
+
     if payload.payment_method == "paypal":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -365,6 +430,9 @@ def create_checkout_order(
             discount_total=discount_total,
             shipping_total=shipping_total,
             grand_total=grand_total,
+            coupon_code=normalized_coupon_code,
+            coupon_discount_amount=discount_total if normalized_coupon_code else 0.0,
+            checkout_idempotency_key=idempotency_key,
             shipping_name=f"{payload.customer.first_name} {payload.customer.last_name}".strip(),
             shipping_address=_serialize_shipping_address(payload),
         )
@@ -380,6 +448,7 @@ def create_checkout_order(
                 customer_phone=payload.customer.phone,
                 order_id=order.id,
                 persist_redemption=True,
+                idempotency_key=idempotency_key,
             )
 
         for item in resolved_items:
