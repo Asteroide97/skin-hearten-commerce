@@ -45,7 +45,7 @@ function getLoadMessage(reason: string | null) {
   }
 
   if (reason === "auth_failed") {
-    return "No pudimos autenticar el acceso admin contra la API local. Revisa credenciales y variables del entorno.";
+    return "Tu sesion de SuperAdmin no es valida o expiro. Vuelve a iniciar sesion.";
   }
 
   return "No fue posible cargar automatizaciones por ahora. La vista se mantiene estable mientras la API local no este disponible.";

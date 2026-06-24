@@ -72,7 +72,7 @@ function getPageMessage(reason: string | null) {
   }
 
   if (reason === "auth_failed") {
-    return "No pudimos autenticar el panel admin contra la API. Revisa las credenciales del entorno.";
+    return "Tu sesion de SuperAdmin no es valida o expiro. Vuelve a iniciar sesion.";
   }
 
   return "No fue posible cargar cupones por ahora. El panel mantiene un estado vacio amigable mientras la API no este disponible.";

@@ -52,7 +52,7 @@ function getLoadMessage(reason: string | null) {
   }
 
   if (reason === "auth_failed") {
-    return "No pudimos autenticar el panel admin contra la API local. Revisa credenciales y variables del entorno.";
+    return "Tu sesion de SuperAdmin no es valida o expiro. Vuelve a iniciar sesion.";
   }
 
   return "No fue posible cargar plantillas por ahora. La vista mantiene un estado vacio amigable mientras la API local no este disponible.";

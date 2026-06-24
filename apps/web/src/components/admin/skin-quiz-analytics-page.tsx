@@ -26,7 +26,7 @@ function getLoadMessage(reason: string | null) {
   }
 
   if (reason === "auth_failed") {
-    return "No pudimos autenticar el acceso admin contra la API local. Revisa las credenciales mock o las variables del entorno.";
+    return "Tu sesion de SuperAdmin no es valida o expiro. Vuelve a iniciar sesion.";
   }
 
   return "No fue posible cargar el reporte por ahora. Si la API local no esta disponible, el panel muestra este estado vacio sin romper la vista.";

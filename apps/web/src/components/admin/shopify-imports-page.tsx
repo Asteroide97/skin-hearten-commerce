@@ -35,7 +35,7 @@ function getPageMessage(reason: string | null) {
     return "Configura NEXT_PUBLIC_API_URL para subir CSV reales a FastAPI desde este panel.";
   }
   if (reason === "auth_failed") {
-    return "No pudimos autenticar el panel admin contra la API. Revisa las credenciales del entorno.";
+    return "Tu sesion de SuperAdmin no es valida o expiro. Vuelve a iniciar sesion.";
   }
   return "No fue posible cargar el historial de importaciones por ahora.";
 }
