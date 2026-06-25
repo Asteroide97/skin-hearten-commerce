@@ -94,12 +94,38 @@ class CRMContactSummaryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
+class CRMContactNextTaskRead(BaseModel):
+    id: int
+    title: str
+    due_at: datetime | None = Field(default=None, serialization_alias="dueAt")
+    status: CRMTaskStatus
+    task_type: CRMTaskType = Field(serialization_alias="taskType")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CRMContactTableSummaryRead(CRMContactSummaryRead):
+    preferred_channel: CRMReminderChannel | None = Field(default=None, serialization_alias="preferredChannel")
+    has_orders: bool = Field(serialization_alias="hasOrders")
+    next_task: CRMContactNextTaskRead | None = Field(default=None, serialization_alias="nextTask")
+
+
 class CRMContactDetailRead(CRMContactSummaryRead):
     events: list[CRMEventRead]
     notes: list[CRMNoteRead]
     tasks: list[CRMTaskRead]
     reminders: list["CRMReminderSummaryRead"]
     purchase_summary: CRMPurchaseSummaryRead = Field(serialization_alias="purchaseSummary")
+
+
+class CRMContactPageRead(BaseModel):
+    items: list[CRMContactTableSummaryRead]
+    page: int
+    page_size: int = Field(serialization_alias="pageSize")
+    total: int
+    total_pages: int = Field(serialization_alias="totalPages")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class CRMContactUpdate(BaseModel):

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { listAdminCrmContacts } from "@/lib/admin-crm-api";
-import type { CRMContactFilters, CRMContactLifecycleStatus } from "@/lib/admin-crm";
+import { listAdminCustomers } from "@/lib/admin-customers-api";
+import type { AdminCustomersFilters } from "@/lib/admin-customers";
+import type { CRMContactLifecycleStatus } from "@/lib/admin-crm";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
-  const filters: CRMContactFilters = {
+  const filters: AdminCustomersFilters = {
     accepted_marketing:
       searchParams.get("accepted_marketing") === "true" || searchParams.get("acceptedMarketing") === "true"
         ? "true"
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
     sortDir: (searchParams.get("sortDir") ?? undefined) as "asc" | "desc" | undefined,
   };
 
-  const result = await listAdminCrmContacts(filters);
+  const result = await listAdminCustomers(filters);
   if (!result.ok) {
     return NextResponse.json(result, { status: result.status ?? 503 });
   }

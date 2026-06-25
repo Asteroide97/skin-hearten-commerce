@@ -38,6 +38,20 @@ export type CRMContactSummary = {
   updatedAt: string;
 };
 
+export type CRMContactNextTask = {
+  id: number;
+  title: string;
+  dueAt: string | null;
+  status: CRMTaskStatus;
+  taskType: CRMTaskType;
+};
+
+export type CRMContactTableSummary = CRMContactSummary & {
+  preferredChannel: CRMReminderChannel | null;
+  hasOrders: boolean;
+  nextTask: CRMContactNextTask | null;
+};
+
 export type CRMEvent = {
   id: number;
   contactId: number | null;
@@ -130,10 +144,23 @@ export type CRMContactDetail = CRMContactSummary & {
 
 export type CRMContactFilters = {
   accepted_marketing?: "true" | "false";
+  has_orders?: "true" | "false";
   lifecycle_status?: CRMContactLifecycleStatus;
   main_goal?: string;
+  page?: number;
+  pageSize?: number;
   search?: string;
   skin_type?: string;
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+};
+
+export type PaginatedCRMContactsResponse = {
+  items: CRMContactTableSummary[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
 };
 
 export type CRMReminderFilters = {

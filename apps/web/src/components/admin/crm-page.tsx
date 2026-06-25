@@ -1,21 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 
+import { ArrowUpRightIcon, SearchIcon, WhatsAppIcon } from "@/components/shared/icons";
 import {
-  ArrowUpRightIcon,
-  SearchIcon,
-  WhatsAppIcon,
-} from "@/components/shared/icons";
-import {
-  getCrmAgeRangeLabel,
+  buildCrmContactName,
   buildCrmReminderMailtoHref,
   buildCrmReminderWhatsAppHref,
-  buildCrmContactName,
   buildCrmWhatsAppHref,
   CRM_LIFECYCLE_STATUS_OPTIONS,
   CRM_REMINDER_CHANNEL_OPTIONS,
   CRM_TASK_TYPE_OPTIONS,
+  getCrmAgeRangeLabel,
   getCrmEventLabel,
   getCrmLifecycleStatusLabel,
   getCrmMainGoalLabel,
@@ -27,45 +23,47 @@ import {
   getCrmTaskStatusLabel,
   getCrmTaskTypeLabel,
   type CRMContactDetail,
-  type CRMReminderChannel,
-  type CRMReminderDetail,
   type CRMContactLifecycleStatus,
-  type CRMContactSummary,
+  type CRMContactTableSummary,
   type CRMContactUpdateInput,
   type CRMNote,
+  type CRMReminderChannel,
+  type CRMReminderDetail,
   type CRMTask,
   type CRMTaskStatus,
   type CRMTaskType,
+  type PaginatedCRMContactsResponse,
 } from "@/lib/admin-crm";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 
 type ContactsApiResponse =
-  | { ok: true; data: CRMContactSummary[] }
-  | { ok: false; reason: string };
+  | { ok: true; data: PaginatedCRMContactsResponse }
+  | { ok: false; reason: string; message?: string };
 
 type ContactDetailApiResponse =
   | { ok: true; data: CRMContactDetail }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; message?: string };
 
 type NoteApiResponse =
   | { ok: true; data: CRMNote }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; message?: string };
 
 type TaskApiResponse =
   | { ok: true; data: CRMTask }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; message?: string };
 
 type ReminderApiResponse =
   | { ok: true; data: CRMReminderDetail }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; message?: string };
 
 type Notice = {
   kind: "error" | "success";
   message: string;
 } | null;
 
+type DrawerTab = "summary" | "events" | "notes" | "tasks" | "reminders";
 type LifecycleFilter = "all" | CRMContactLifecycleStatus;
-type MarketingFilter = "all" | "true" | "false";
+type BooleanFilter = "all" | "true" | "false";
 type SkinTypeFilter = "all" | "seca" | "mixta" | "grasa" | "sensible" | "no_segura";
 type MainGoalFilter =
   | "all"
@@ -76,13 +74,13 @@ type MainGoalFilter =
   | "luminosidad"
   | "proteccion_solar";
 
-type FiltersState = {
-  lifecycleStatus: LifecycleFilter;
-  mainGoal: MainGoalFilter;
-  marketingAccepted: MarketingFilter;
-  search: string;
-  skinType: SkinTypeFilter;
-};
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
+const SORT_OPTIONS = [
+  { label: "Ultima actividad", value: "lastSeenAt" },
+  { label: "Nombre", value: "contact" },
+  { label: "Lifecycle", value: "lifecycleStatus" },
+  { label: "Alta CRM", value: "createdAt" },
+];
 
 const skinTypeOptions: Array<{ label: string; value: SkinTypeFilter }> = [
   { value: "all", label: "Toda piel" },
@@ -103,28 +101,22 @@ const mainGoalOptions: Array<{ label: string; value: MainGoalFilter }> = [
   { value: "proteccion_solar", label: "Proteccion solar" },
 ];
 
-const marketingOptions: Array<{ label: string; value: MarketingFilter }> = [
-  { value: "all", label: "Marketing: todos" },
-  { value: "true", label: "Acepto marketing" },
-  { value: "false", label: "Sin consentimiento" },
-];
-
 function getLoadMessage(reason: string | null, hasFilters: boolean) {
   if (!reason) {
     return hasFilters
-      ? "No encontramos contactos con esos filtros. Prueba otra busqueda o limpia algunos criterios."
-      : "Aun no hay contactos CRM sincronizados desde Skin Quiz o checkout.";
+      ? "No encontramos contactos con esos filtros. Ajusta la busqueda o limpia algunos criterios."
+      : "Todavia no hay contactos CRM sincronizados desde Skin Quiz, checkout o importaciones.";
   }
 
   if (reason === "api_url_missing") {
-    return "Configura NEXT_PUBLIC_API_URL para consultar la base CRM desde el panel admin.";
+    return "Configura NEXT_PUBLIC_API_URL para consultar el CRM real desde FastAPI.";
   }
 
   if (reason === "auth_failed") {
     return "Tu sesion de SuperAdmin no es valida o expiro. Vuelve a iniciar sesion.";
   }
 
-  return "No fue posible cargar el CRM por ahora. El panel mantiene un estado vacio amigable mientras la API local no este disponible.";
+  return "No fue posible cargar la base CRM por ahora. El panel mantiene un estado vacio amigable mientras la API no este disponible.";
 }
 
 function getLifecycleBadgeClasses(status: CRMContactLifecycleStatus) {
@@ -137,8 +129,14 @@ function getLifecycleBadgeClasses(status: CRMContactLifecycleStatus) {
       return "border-stone-200 bg-stone-100 text-stone-600";
     case "lead":
     default:
-      return "border-[#e7d3c1] bg-[#fff8f3] text-stone-800";
+      return "border-[#ead9c8] bg-[#fff8f3] text-stone-800";
   }
+}
+
+function getMarketingBadgeClasses(value: boolean) {
+  return value
+    ? "border-[#d8e3cf] bg-[#f3faf0] text-[#476638]"
+    : "border-stone-200 bg-stone-100 text-stone-600";
 }
 
 function getTaskBadgeClasses(status: CRMTaskStatus) {
@@ -149,7 +147,7 @@ function getTaskBadgeClasses(status: CRMTaskStatus) {
       return "border-stone-200 bg-stone-100 text-stone-600";
     case "pending":
     default:
-      return "border-[#e7d3c1] bg-[#fff8f3] text-stone-800";
+      return "border-[#ead9c8] bg-[#fff8f3] text-stone-800";
   }
 }
 
@@ -164,20 +162,52 @@ function getReminderBadgeClasses(status: CRMReminderDetail["status"]) {
       return "border-stone-200 bg-stone-100 text-stone-600";
     case "pending":
     default:
-      return "border-[#e7d3c1] bg-[#fff8f3] text-stone-800";
+      return "border-[#ead9c8] bg-[#fff8f3] text-stone-800";
   }
 }
 
-function toDatetimeLocalValue(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
+function getChannelBadgeClasses(channel: CRMContactTableSummary["preferredChannel"]) {
+  if (channel === "whatsapp") {
+    return "border-[#cfe0df] bg-[#eef8f7] text-[#2c6160]";
   }
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return offsetDate.toISOString().slice(0, 16);
+  if (channel === "email") {
+    return "border-[#ead9c8] bg-[#fff8f3] text-stone-800";
+  }
+  return "border-stone-200 bg-white text-stone-500";
 }
 
-function buildSummaryFromDetail(detail: CRMContactDetail): CRMContactSummary {
+function getContactDisplayName(contact: Pick<CRMContactTableSummary, "email" | "firstName" | "lastName">) {
+  return buildCrmContactName(contact) || contact.email || "Contacto sin nombre";
+}
+
+function getNextTask(tasks: CRMTask[]) {
+  const pendingTasks = tasks
+    .filter((task) => task.status === "pending")
+    .slice()
+    .sort((first, second) => {
+      const firstTime = Date.parse(first.dueAt ?? first.createdAt);
+      const secondTime = Date.parse(second.dueAt ?? second.createdAt);
+      return firstTime - secondTime;
+    });
+
+  if (pendingTasks.length === 0) {
+    return null;
+  }
+
+  const task = pendingTasks[0];
+  return {
+    dueAt: task.dueAt,
+    id: task.id,
+    status: task.status,
+    taskType: task.taskType,
+    title: task.title,
+  };
+}
+
+function buildTableSummaryFromDetail(
+  detail: CRMContactDetail,
+  current: CRMContactTableSummary | null,
+): CRMContactTableSummary {
   return {
     acceptedMarketing: detail.acceptedMarketing,
     ageRange: detail.ageRange,
@@ -185,11 +215,14 @@ function buildSummaryFromDetail(detail: CRMContactDetail): CRMContactSummary {
     email: detail.email,
     firstName: detail.firstName,
     firstSeenAt: detail.firstSeenAt,
+    hasOrders: detail.purchaseSummary.orderCount > 0,
     id: detail.id,
     lastName: detail.lastName,
     lastSeenAt: detail.lastSeenAt,
     lifecycleStatus: detail.lifecycleStatus,
     mainGoal: detail.mainGoal,
+    nextTask: getNextTask(detail.tasks),
+    preferredChannel: detail.whatsapp ? "whatsapp" : detail.email ? "email" : current?.preferredChannel ?? null,
     skinType: detail.skinType,
     source: detail.source,
     updatedAt: detail.updatedAt,
@@ -198,22 +231,30 @@ function buildSummaryFromDetail(detail: CRMContactDetail): CRMContactSummary {
 }
 
 export function CrmPage() {
-  const [contacts, setContacts] = useState<CRMContactSummary[]>([]);
+  const [contacts, setContacts] = useState<CRMContactTableSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorReason, setErrorReason] = useState<string | null>(null);
-  const [pageNotice, setPageNotice] = useState<Notice>(null);
 
   const [searchValue, setSearchValue] = useState("");
+  const deferredSearch = useDeferredValue(searchValue);
   const [lifecycleFilter, setLifecycleFilter] = useState<LifecycleFilter>("all");
   const [skinTypeFilter, setSkinTypeFilter] = useState<SkinTypeFilter>("all");
   const [mainGoalFilter, setMainGoalFilter] = useState<MainGoalFilter>("all");
-  const [marketingFilter, setMarketingFilter] = useState<MarketingFilter>("all");
+  const [marketingFilter, setMarketingFilter] = useState<BooleanFilter>("all");
+  const [hasOrdersFilter, setHasOrdersFilter] = useState<BooleanFilter>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [sortBy, setSortBy] = useState("lastSeenAt");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
   const [detailCache, setDetailCache] = useState<Record<number, CRMContactDetail>>({});
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [drawerNotice, setDrawerNotice] = useState<Notice>(null);
+  const [activeTab, setActiveTab] = useState<DrawerTab>("summary");
 
   const [draftLifecycleStatus, setDraftLifecycleStatus] = useState<CRMContactLifecycleStatus>("lead");
   const [draftAcceptedMarketing, setDraftAcceptedMarketing] = useState(false);
@@ -234,62 +275,132 @@ export function CrmPage() {
   const [reminderBodyDraft, setReminderBodyDraft] = useState("");
   const [isSubmittingReminder, setIsSubmittingReminder] = useState(false);
 
-  const activeContact = selectedContactId ? detailCache[selectedContactId] : null;
+  const activeContact = selectedContactId ? detailCache[selectedContactId] ?? null : null;
   const hasFilters =
-    searchValue.trim().length > 0 ||
+    deferredSearch.trim().length > 0 ||
     lifecycleFilter !== "all" ||
     skinTypeFilter !== "all" ||
     mainGoalFilter !== "all" ||
-    marketingFilter !== "all";
-  const contactCountLabel = contacts.length === 1 ? "1 contacto" : `${contacts.length} contactos`;
+    marketingFilter !== "all" ||
+    hasOrdersFilter !== "all";
   const hasProfileChanges = activeContact
     ? draftLifecycleStatus !== activeContact.lifecycleStatus ||
       draftAcceptedMarketing !== activeContact.acceptedMarketing
     : false;
 
-  const loadContacts = useCallback(async (filters: FiltersState) => {
-    setIsLoading(true);
-    const params = new URLSearchParams();
-    if (filters.search.trim().length > 0) {
-      params.set("search", filters.search.trim());
-    }
-    if (filters.lifecycleStatus !== "all") {
-      params.set("lifecycle_status", filters.lifecycleStatus);
-    }
-    if (filters.skinType !== "all") {
-      params.set("skin_type", filters.skinType);
-    }
-    if (filters.mainGoal !== "all") {
-      params.set("main_goal", filters.mainGoal);
-    }
-    if (filters.marketingAccepted !== "all") {
-      params.set("accepted_marketing", filters.marketingAccepted);
-    }
+  useEffect(() => {
+    setPage(1);
+  }, [deferredSearch, hasOrdersFilter, lifecycleFilter, mainGoalFilter, marketingFilter, pageSize, skinTypeFilter, sortBy, sortDir]);
 
-    try {
-      const requestUrl = params.size > 0 ? `/api/admin/crm/contacts?${params.toString()}` : "/api/admin/crm/contacts";
-      const response = await fetch(requestUrl, { cache: "no-store" });
-      const payload = (await response.json()) as ContactsApiResponse;
+  useEffect(() => {
+    let cancelled = false;
 
-      if (!response.ok || !payload.ok) {
-        setContacts([]);
-        setErrorReason(payload.ok ? "fetch_failed" : payload.reason);
-        return;
+    async function loadContacts() {
+      setIsLoading(true);
+
+      try {
+        const params = new URLSearchParams({
+          page: String(page),
+          pageSize: String(pageSize),
+          sortBy,
+          sortDir,
+        });
+
+        if (deferredSearch.trim()) {
+          params.set("search", deferredSearch.trim());
+        }
+        if (lifecycleFilter !== "all") {
+          params.set("lifecycle_status", lifecycleFilter);
+        }
+        if (skinTypeFilter !== "all") {
+          params.set("skin_type", skinTypeFilter);
+        }
+        if (mainGoalFilter !== "all") {
+          params.set("main_goal", mainGoalFilter);
+        }
+        if (marketingFilter !== "all") {
+          params.set("accepted_marketing", marketingFilter);
+        }
+        if (hasOrdersFilter !== "all") {
+          params.set("has_orders", hasOrdersFilter);
+        }
+
+        const response = await fetch(`/api/admin/crm/contacts?${params.toString()}`, {
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as ContactsApiResponse;
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!response.ok || !payload.ok) {
+          setContacts([]);
+          setErrorReason(payload.ok ? "fetch_failed" : payload.reason);
+          setTotal(0);
+          setTotalPages(1);
+          return;
+        }
+
+        setContacts(payload.data.items);
+        setErrorReason(null);
+        setPage(payload.data.page);
+        setTotal(payload.data.total);
+        setTotalPages(Math.max(1, payload.data.totalPages));
+      } catch {
+        if (!cancelled) {
+          setContacts([]);
+          setErrorReason("fetch_failed");
+          setTotal(0);
+          setTotalPages(1);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
-
-      setContacts(payload.data);
-      setErrorReason(null);
-    } catch {
-      setContacts([]);
-      setErrorReason("fetch_failed");
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
+
+    void loadContacts();
+    return () => {
+      cancelled = true;
+    };
+  }, [deferredSearch, hasOrdersFilter, lifecycleFilter, mainGoalFilter, marketingFilter, page, pageSize, skinTypeFilter, sortBy, sortDir]);
+
+  useEffect(() => {
+    if (!activeContact) {
+      return;
+    }
+
+    setDraftLifecycleStatus(activeContact.lifecycleStatus);
+    setDraftAcceptedMarketing(activeContact.acceptedMarketing);
+  }, [activeContact]);
+
+  useEffect(() => {
+    setActiveTab("summary");
+    setDrawerNotice(null);
+    setDetailError(null);
+    setNoteDraft("");
+    setTaskTitleDraft("");
+    setTaskDueAtDraft("");
+    setTaskTypeDraft("manual");
+    setReminderChannelDraft("whatsapp");
+    setReminderScheduledForDraft("");
+    setReminderSubjectDraft("");
+    setReminderBodyDraft("");
+  }, [selectedContactId]);
+
+  function mergeSummary(detail: CRMContactDetail) {
+    setContacts((current) =>
+      current.map((contact) =>
+        contact.id === detail.id ? buildTableSummaryFromDetail(detail, contact) : contact,
+      ),
+    );
+  }
 
   async function loadContactDetail(contactId: number, force = false) {
     if (!force && detailCache[contactId]) {
-      return;
+      return detailCache[contactId];
     }
 
     setIsDetailLoading(true);
@@ -303,33 +414,25 @@ export function CrmPage() {
 
       if (!response.ok || !payload.ok) {
         setDetailError(payload.ok ? "fetch_failed" : payload.reason);
-        return;
+        return null;
       }
 
       setDetailCache((current) => ({
         ...current,
         [contactId]: payload.data,
       }));
+      mergeSummary(payload.data);
+      return payload.data;
     } catch {
       setDetailError("fetch_failed");
+      return null;
     } finally {
       setIsDetailLoading(false);
     }
   }
 
-  function mergeUpdatedContact(updatedContact: CRMContactDetail) {
-    setDetailCache((current) => ({
-      ...current,
-      [updatedContact.id]: updatedContact,
-    }));
-    setContacts((current) =>
-      current.map((contact) => (contact.id === updatedContact.id ? buildSummaryFromDetail(updatedContact) : contact)),
-    );
-  }
-
   async function handleOpenDetail(contactId: number) {
     setSelectedContactId(contactId);
-    setDrawerNotice(null);
     await loadContactDetail(contactId);
   }
 
@@ -341,7 +444,7 @@ export function CrmPage() {
     if (!hasProfileChanges) {
       setDrawerNotice({
         kind: "success",
-        message: "No habia cambios por guardar en el perfil del contacto.",
+        message: "No hay cambios pendientes en el perfil CRM.",
       });
       return;
     }
@@ -370,12 +473,16 @@ export function CrmPage() {
       if (!response.ok || !result.ok) {
         setDrawerNotice({
           kind: "error",
-          message: "No pudimos guardar el perfil. El drawer sigue abierto para que no pierdas contexto.",
+          message: result.ok ? "No pudimos guardar el perfil CRM." : result.message ?? "No pudimos guardar el perfil CRM.",
         });
         return;
       }
 
-      mergeUpdatedContact(result.data);
+      setDetailCache((current) => ({
+        ...current,
+        [activeContact.id]: result.data,
+      }));
+      mergeSummary(result.data);
       setDrawerNotice({
         kind: "success",
         message: "Perfil CRM actualizado correctamente.",
@@ -383,10 +490,21 @@ export function CrmPage() {
     } catch {
       setDrawerNotice({
         kind: "error",
-        message: "No pudimos guardar el perfil. Reintenta cuando la API local este disponible.",
+        message: "No pudimos guardar el perfil CRM por ahora.",
       });
     } finally {
       setIsSavingProfile(false);
+    }
+  }
+
+  async function refreshSelectedContact(contactId: number) {
+    const refreshed = await loadContactDetail(contactId, true);
+    if (refreshed) {
+      setDetailCache((current) => ({
+        ...current,
+        [contactId]: refreshed,
+      }));
+      mergeSummary(refreshed);
     }
   }
 
@@ -398,7 +516,7 @@ export function CrmPage() {
     if (noteDraft.trim().length < 2) {
       setDrawerNotice({
         kind: "error",
-        message: "Escribe una nota interna con al menos 2 caracteres.",
+        message: "Escribe una nota con al menos 2 caracteres.",
       });
       return;
     }
@@ -419,26 +537,13 @@ export function CrmPage() {
       if (!response.ok || !payload.ok) {
         setDrawerNotice({
           kind: "error",
-          message: "No pudimos guardar la nota por ahora.",
+          message: "No pudimos guardar la nota interna.",
         });
         return;
       }
 
-      setDetailCache((current) => {
-        const currentContact = current[activeContact.id];
-        if (!currentContact) {
-          return current;
-        }
-
-        return {
-          ...current,
-          [activeContact.id]: {
-            ...currentContact,
-            notes: [payload.data, ...currentContact.notes],
-          },
-        };
-      });
       setNoteDraft("");
+      await refreshSelectedContact(activeContact.id);
       setDrawerNotice({
         kind: "success",
         message: "Nota interna creada.",
@@ -446,7 +551,7 @@ export function CrmPage() {
     } catch {
       setDrawerNotice({
         kind: "error",
-        message: "No pudimos guardar la nota por ahora.",
+        message: "No pudimos guardar la nota interna.",
       });
     } finally {
       setIsSubmittingNote(false);
@@ -476,9 +581,9 @@ export function CrmPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          title: taskTitleDraft.trim(),
           dueAt: taskDueAtDraft ? new Date(taskDueAtDraft).toISOString() : null,
           taskType: taskTypeDraft,
+          title: taskTitleDraft.trim(),
         }),
       });
       const payload = (await response.json()) as TaskApiResponse;
@@ -491,23 +596,10 @@ export function CrmPage() {
         return;
       }
 
-      setDetailCache((current) => {
-        const currentContact = current[activeContact.id];
-        if (!currentContact) {
-          return current;
-        }
-
-        return {
-          ...current,
-          [activeContact.id]: {
-            ...currentContact,
-            tasks: [payload.data, ...currentContact.tasks],
-          },
-        };
-      });
       setTaskTitleDraft("");
       setTaskDueAtDraft("");
       setTaskTypeDraft("manual");
+      await refreshSelectedContact(activeContact.id);
       setDrawerNotice({
         kind: "success",
         message: "Tarea creada correctamente.",
@@ -519,6 +611,47 @@ export function CrmPage() {
       });
     } finally {
       setIsSubmittingTask(false);
+    }
+  }
+
+  async function handleTaskStatusChange(taskId: number, status: CRMTaskStatus) {
+    if (!activeContact) {
+      return;
+    }
+
+    setTaskActionId(taskId);
+    setDrawerNotice(null);
+
+    try {
+      const response = await fetch(`/api/admin/crm/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      });
+      const payload = (await response.json()) as TaskApiResponse;
+
+      if (!response.ok || !payload.ok) {
+        setDrawerNotice({
+          kind: "error",
+          message: "No pudimos actualizar la tarea.",
+        });
+        return;
+      }
+
+      await refreshSelectedContact(activeContact.id);
+      setDrawerNotice({
+        kind: "success",
+        message: "Tarea actualizada.",
+      });
+    } catch {
+      setDrawerNotice({
+        kind: "error",
+        message: "No pudimos actualizar la tarea.",
+      });
+    } finally {
+      setTaskActionId(null);
     }
   }
 
@@ -565,177 +698,78 @@ export function CrmPage() {
       if (!response.ok || !payload.ok) {
         setDrawerNotice({
           kind: "error",
-          message: "No pudimos crear el recordatorio manual por ahora.",
+          message: "No pudimos crear el recordatorio manual.",
         });
         return;
       }
 
-      setDetailCache((current) => {
-        const currentContact = current[activeContact.id];
-        if (!currentContact) {
-          return current;
-        }
-
-        return {
-          ...current,
-          [activeContact.id]: {
-            ...currentContact,
-            reminders: [payload.data, ...currentContact.reminders],
-          },
-        };
-      });
       setReminderChannelDraft("whatsapp");
       setReminderScheduledForDraft("");
       setReminderSubjectDraft("");
       setReminderBodyDraft("");
+      await refreshSelectedContact(activeContact.id);
       setDrawerNotice({
         kind: "success",
-        message: "Recordatorio manual creado correctamente.",
+        message: "Recordatorio manual creado.",
       });
     } catch {
       setDrawerNotice({
         kind: "error",
-        message: "No pudimos crear el recordatorio manual por ahora.",
+        message: "No pudimos crear el recordatorio manual.",
       });
     } finally {
       setIsSubmittingReminder(false);
     }
   }
 
-  async function handleTaskStatusChange(taskId: number, status: CRMTaskStatus) {
-    if (!activeContact) {
-      return;
-    }
-
-    setTaskActionId(taskId);
-    setDrawerNotice(null);
-
-    try {
-      const response = await fetch(`/api/admin/crm/tasks/${taskId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status }),
-      });
-      const payload = (await response.json()) as TaskApiResponse;
-
-      if (!response.ok || !payload.ok) {
-        setDrawerNotice({
-          kind: "error",
-          message: "No pudimos actualizar la tarea por ahora.",
-        });
-        return;
-      }
-
-      setDetailCache((current) => {
-        const currentContact = current[activeContact.id];
-        if (!currentContact) {
-          return current;
-        }
-
-        return {
-          ...current,
-          [activeContact.id]: {
-            ...currentContact,
-            tasks: currentContact.tasks.map((task) => (task.id === taskId ? payload.data : task)),
-          },
-        };
-      });
-      setDrawerNotice({
-        kind: "success",
-        message: "Tarea actualizada.",
-      });
-    } catch {
-      setDrawerNotice({
-        kind: "error",
-        message: "No pudimos actualizar la tarea por ahora.",
-      });
-    } finally {
-      setTaskActionId(null);
-    }
-  }
-
-  useEffect(() => {
-    void loadContacts({
-      lifecycleStatus: "all",
-      mainGoal: "all",
-      marketingAccepted: "all",
-      search: "",
-      skinType: "all",
-    });
-  }, [loadContacts]);
-
-  useEffect(() => {
-    if (!activeContact) {
-      return;
-    }
-
-    setDraftLifecycleStatus(activeContact.lifecycleStatus);
-    setDraftAcceptedMarketing(activeContact.acceptedMarketing);
-    const defaultReminderDate = new Date();
-    defaultReminderDate.setHours(defaultReminderDate.getHours() + 1);
-    setReminderScheduledForDraft(toDatetimeLocalValue(defaultReminderDate.toISOString()));
-    setReminderChannelDraft("whatsapp");
-    setReminderSubjectDraft("");
-    setReminderBodyDraft("");
-  }, [activeContact]);
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = total === 0 ? 0 : Math.min(total, page * pageSize);
 
   return (
     <>
       <div className="space-y-6">
         <section className="soft-panel rounded-[1.8rem] p-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">CRM Base</p>
-              <h1 className="mt-2 font-serif text-4xl text-stone-900">Contactos, eventos y seguimiento comercial</h1>
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">CRM</p>
+              <h1 className="mt-2 font-serif text-4xl text-stone-900">Operacion comercial escalable</h1>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-600">
-                Centraliza leads y clientes desde Skin Quiz y checkout, con trazabilidad comercial antes de automatizar email o WhatsApp.
+                Tabla compacta, filtros server-side y drawer por tabs para seguir 10,000+ contactos sin saturar la vista.
               </p>
             </div>
-            <div className="rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-600">
-              {isLoading ? "Cargando CRM..." : contactCountLabel}
+            <div className="flex flex-wrap gap-3">
+              <MetricPill label="Total" value={String(total)} />
+              <MetricPill label="Mostrando" value={`${rangeStart}-${rangeEnd}`} />
+              <MetricPill label="Pagina" value={`${page}/${Math.max(1, totalPages)}`} />
             </div>
           </div>
 
-          <form
-            className="mt-6 grid gap-3 xl:grid-cols-[1.2fr_0.9fr_0.9fr_0.9fr_0.9fr_auto]"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setPageNotice(null);
-              void loadContacts({
-                lifecycleStatus: lifecycleFilter,
-                mainGoal: mainGoalFilter,
-                marketingAccepted: marketingFilter,
-                search: searchValue,
-                skinType: skinTypeFilter,
-              });
-            }}
-          >
-            <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Buscar</span>
-              <div className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-4 py-3">
-                <SearchIcon className="text-stone-400" />
-                <input
-                  className="w-full bg-transparent text-sm text-stone-900 outline-none"
-                  onChange={(event) => {
-                    setSearchValue(event.target.value);
-                  }}
-                  placeholder="Nombre, email o WhatsApp"
-                  value={searchValue}
-                />
-              </div>
+          <div className="mt-6 grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_repeat(6,minmax(0,1fr))]">
+            <label className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-5 py-3">
+              <SearchIcon className="h-4 w-4 text-stone-500" />
+              <input
+                className="w-full border-none bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
+                onChange={(event) => {
+                  setSearchValue(event.target.value);
+                }}
+                placeholder="Buscar por nombre, email o WhatsApp"
+                value={searchValue}
+              />
             </label>
-
             <FilterSelect
-              label="Status"
+              label="Lifecycle"
               onChange={(value) => {
                 setLifecycleFilter(value as LifecycleFilter);
               }}
-              options={[{ label: "Todos los status", value: "all" }, ...CRM_LIFECYCLE_STATUS_OPTIONS]}
+              options={[
+                { label: "Todos", value: "all" },
+                ...CRM_LIFECYCLE_STATUS_OPTIONS.map((option) => ({
+                  label: option.label,
+                  value: option.value,
+                })),
+              ]}
               value={lifecycleFilter}
             />
-
             <FilterSelect
               label="Piel"
               onChange={(value) => {
@@ -744,7 +778,6 @@ export function CrmPage() {
               options={skinTypeOptions}
               value={skinTypeFilter}
             />
-
             <FilterSelect
               label="Objetivo"
               onChange={(value) => {
@@ -753,168 +786,204 @@ export function CrmPage() {
               options={mainGoalOptions}
               value={mainGoalFilter}
             />
-
             <FilterSelect
               label="Marketing"
               onChange={(value) => {
-                setMarketingFilter(value as MarketingFilter);
+                setMarketingFilter(value as BooleanFilter);
               }}
-              options={marketingOptions}
+              options={[
+                { label: "Todos", value: "all" },
+                { label: "Aceptado", value: "true" },
+                { label: "No aceptado", value: "false" },
+              ]}
               value={marketingFilter}
             />
-
-            <div className="flex items-end">
-              <button
-                className="w-full rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 md:w-auto"
-                type="submit"
-              >
-                Aplicar filtros
-              </button>
+            <FilterSelect
+              label="Pedidos"
+              onChange={(value) => {
+                setHasOrdersFilter(value as BooleanFilter);
+              }}
+              options={[
+                { label: "Todos", value: "all" },
+                { label: "Con pedidos", value: "true" },
+                { label: "Sin pedidos", value: "false" },
+              ]}
+              value={hasOrdersFilter}
+            />
+            <div className="grid gap-3 sm:grid-cols-3 xl:col-span-2">
+              <FilterSelect
+                label="Orden"
+                onChange={(value) => {
+                  setSortBy(value);
+                }}
+                options={SORT_OPTIONS}
+                value={sortBy}
+              />
+              <FilterSelect
+                label="Direccion"
+                onChange={(value) => {
+                  setSortDir(value as "asc" | "desc");
+                }}
+                options={[
+                  { label: "Desc", value: "desc" },
+                  { label: "Asc", value: "asc" },
+                ]}
+                value={sortDir}
+              />
+              <FilterSelect
+                label="Page size"
+                onChange={(value) => {
+                  setPageSize(Number(value));
+                }}
+                options={PAGE_SIZE_OPTIONS.map((option) => ({
+                  label: String(option),
+                  value: String(option),
+                }))}
+                value={String(pageSize)}
+              />
             </div>
-          </form>
-
-          {pageNotice ? <NoticeBanner className="mt-5" notice={pageNotice} /> : null}
+          </div>
         </section>
 
         <section className="soft-panel rounded-[1.8rem] p-4 sm:p-6">
-          {isLoading ? (
-            <div className="rounded-[1.5rem] border border-dashed border-stone-300 bg-white px-5 py-10 text-center text-sm text-stone-500">
-              Cargando contactos CRM...
-            </div>
-          ) : contacts.length === 0 ? (
-            <div className="rounded-[1.5rem] border border-dashed border-stone-300 bg-white px-5 py-10 text-center">
-              <p className="font-serif text-2xl text-stone-900">Sin contactos por ahora</p>
-              <p className="mt-3 text-sm leading-7 text-stone-600">{getLoadMessage(errorReason, hasFilters)}</p>
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-[1.6rem] border border-stone-200 bg-white">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-stone-200 text-left">
-                  <thead className="bg-[#fff8f3] text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+          <div className="overflow-hidden rounded-[1.5rem] border border-stone-200 bg-white">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-stone-200 text-left">
+                <thead className="bg-[#fff8f3] text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500">
+                  <tr>
+                    <th className="px-4 py-4">Contacto</th>
+                    <th className="px-4 py-4">Canal</th>
+                    <th className="px-4 py-4">Lifecycle</th>
+                    <th className="px-4 py-4">Piel</th>
+                    <th className="px-4 py-4">Objetivo</th>
+                    <th className="px-4 py-4">Marketing</th>
+                    <th className="px-4 py-4">Ultima actividad</th>
+                    <th className="px-4 py-4">Proxima tarea</th>
+                    <th className="px-4 py-4 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100 text-sm text-stone-700">
+                  {isLoading ? (
+                    Array.from({ length: 10 }).map((_, index) => <SkeletonRow key={index} />)
+                  ) : contacts.length === 0 ? (
                     <tr>
-                      <th className="px-4 py-4">Contacto</th>
-                      <th className="px-4 py-4">WhatsApp</th>
-                      <th className="px-4 py-4">Email</th>
-                      <th className="px-4 py-4">Status</th>
-                      <th className="px-4 py-4">Piel</th>
-                      <th className="px-4 py-4">Objetivo</th>
-                      <th className="px-4 py-4">Marketing</th>
-                      <th className="px-4 py-4">Ultima actividad</th>
-                      <th className="px-4 py-4 text-right">Detalle</th>
+                      <td className="px-4 py-10" colSpan={9}>
+                        <EmptyBlock message={getLoadMessage(errorReason, hasFilters)} />
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-100 text-sm text-stone-700">
-                    {contacts.map((contact) => {
-                      const name = buildCrmContactName(contact);
-
-                      return (
-                        <tr className="align-top" key={contact.id}>
-                          <td className="px-4 py-4">
-                            <p className="font-semibold text-stone-900">{name}</p>
-                            <p className="mt-1 text-xs leading-6 text-stone-500">
-                              {getCrmSourceLabel(contact.source)}
+                  ) : (
+                    contacts.map((contact) => (
+                      <tr className="align-top transition hover:bg-[#fffdfb]" key={contact.id}>
+                        <td className="px-4 py-4">
+                          <button
+                            className="text-left"
+                            onClick={() => {
+                              void handleOpenDetail(contact.id);
+                            }}
+                            type="button"
+                          >
+                            <p className="font-semibold text-stone-900">{getContactDisplayName(contact)}</p>
+                            <p className="mt-1 text-xs text-stone-500">
+                              {contact.email ?? "Sin email"}
+                              {contact.whatsapp ? ` / ${contact.whatsapp}` : ""}
                             </p>
-                          </td>
-                          <td className="px-4 py-4">
-                            {contact.whatsapp ? (
-                              <a
-                                className="inline-flex items-center gap-2 font-medium text-[#1a6f4e] transition hover:text-[#14553c]"
-                                href={buildCrmWhatsAppHref(contact.whatsapp, name)}
-                                rel="noreferrer"
-                                target="_blank"
-                              >
-                                <WhatsAppIcon className="h-4 w-4" />
-                                {contact.whatsapp}
-                              </a>
-                            ) : (
-                              <span className="text-stone-400">Sin WhatsApp</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-4">
-                            {contact.email ? (
-                              <a className="text-stone-700 underline-offset-4 hover:underline" href={`mailto:${contact.email}`}>
-                                {contact.email}
-                              </a>
-                            ) : (
-                              <span className="text-stone-400">Sin email</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-4">
-                            <span
-                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getLifecycleBadgeClasses(contact.lifecycleStatus)}`}
-                            >
-                              {getCrmLifecycleStatusLabel(contact.lifecycleStatus)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4">{getCrmSkinTypeLabel(contact.skinType)}</td>
-                          <td className="px-4 py-4">{getCrmMainGoalLabel(contact.mainGoal)}</td>
-                          <td className="px-4 py-4">
-                            <span
-                              className={`rounded-full border px-3 py-1 text-xs ${
-                                contact.acceptedMarketing
-                                  ? "border-[#d8e3cf] bg-[#f3faf0] text-[#476638]"
-                                  : "border-stone-200 bg-stone-100 text-stone-600"
-                              }`}
-                            >
-                              {contact.acceptedMarketing ? "Aceptado" : "No"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-stone-600">
-                            {formatDateTime(contact.lastSeenAt)}
-                          </td>
-                          <td className="px-4 py-4 text-right">
-                            <button
-                              className="inline-flex items-center gap-2 rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-stone-700 transition hover:border-stone-500 hover:text-stone-950"
-                              onClick={() => {
-                                void handleOpenDetail(contact.id);
-                              }}
-                              type="button"
-                            >
-                              Ver detalle
-                              <ArrowUpRightIcon />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          </button>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getChannelBadgeClasses(contact.preferredChannel)}`}>
+                            {contact.preferredChannel ? getCrmReminderChannelLabel(contact.preferredChannel) : "Sin canal"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getLifecycleBadgeClasses(contact.lifecycleStatus)}`}>
+                            {getCrmLifecycleStatusLabel(contact.lifecycleStatus)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-stone-600">{getCrmSkinTypeLabel(contact.skinType)}</td>
+                        <td className="px-4 py-4 text-sm text-stone-600">{getCrmMainGoalLabel(contact.mainGoal)}</td>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getMarketingBadgeClasses(contact.acceptedMarketing)}`}>
+                            {contact.acceptedMarketing ? "Aceptado" : "No"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-stone-600">{formatDateTime(contact.lastSeenAt)}</td>
+                        <td className="px-4 py-4">
+                          {contact.nextTask ? (
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-stone-900">{contact.nextTask.title}</p>
+                              <p className="text-xs text-stone-500">
+                                {getCrmTaskTypeLabel(contact.nextTask.taskType)}
+                                {contact.nextTask.dueAt ? ` / ${formatDateTime(contact.nextTask.dueAt)}` : ""}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-stone-500">Sin tarea pendiente</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <button
+                            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-800 transition hover:border-stone-500"
+                            onClick={() => {
+                              void handleOpenDetail(contact.id);
+                            }}
+                            type="button"
+                          >
+                            Ver detalle
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
+          </div>
+
+          <PaginationFooter
+            currentPage={page}
+            disabled={isLoading || contacts.length === 0}
+            onNext={() => {
+              setPage((current) => Math.min(totalPages, current + 1));
+            }}
+            onPrevious={() => {
+              setPage((current) => Math.max(1, current - 1));
+            }}
+            total={total}
+            totalPages={totalPages}
+          />
         </section>
       </div>
 
       {selectedContactId ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 bg-stone-950/25 backdrop-blur-sm"
-          onClick={() => {
-            setSelectedContactId(null);
-            setDetailError(null);
-            setDrawerNotice(null);
-          }}
-          role="dialog"
-        >
-          <div className="flex h-full justify-end">
-            <aside
-              className="h-full w-full max-w-2xl overflow-y-auto border-l border-stone-200 bg-[#fffaf7] p-5 shadow-[0_30px_90px_rgba(28,20,16,0.18)] sm:p-6"
-              onClick={(event) => {
-                event.stopPropagation();
+        <div className="fixed inset-0 z-50 bg-stone-950/30 backdrop-blur-[2px]">
+          <div className="absolute inset-y-0 right-0 flex w-full justify-end">
+            <button
+              aria-label="Cerrar detalle"
+              className="hidden flex-1 cursor-default lg:block"
+              onClick={() => {
+                setSelectedContactId(null);
+                setDrawerNotice(null);
               }}
-            >
+              type="button"
+            />
+            <aside className="flex h-full w-full max-w-4xl flex-col overflow-y-auto border-l border-stone-200 bg-[#fcfaf8] px-5 py-5 shadow-2xl sm:px-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">CRM detail</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Detalle CRM</p>
                   <h2 className="mt-2 font-serif text-3xl text-stone-900">
-                    {activeContact ? buildCrmContactName(activeContact) : "Cargando contacto"}
+                    {activeContact ? getContactDisplayName(activeContact) : `Contacto #${selectedContactId}`}
                   </h2>
+                  {activeContact ? (
+                    <p className="mt-2 text-sm text-stone-600">
+                      {activeContact.email ?? "Sin email"}
+                      {activeContact.whatsapp ? ` / ${activeContact.whatsapp}` : ""}
+                    </p>
+                  ) : null}
                 </div>
                 <button
-                  className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-stone-500 hover:text-stone-950"
+                  className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 transition hover:border-stone-500"
                   onClick={() => {
                     setSelectedContactId(null);
-                    setDetailError(null);
                     setDrawerNotice(null);
                   }}
                   type="button"
@@ -923,433 +992,464 @@ export function CrmPage() {
                 </button>
               </div>
 
+              {drawerNotice ? <NoticeBanner className="mt-5" notice={drawerNotice} /> : null}
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <DrawerTabButton
+                  active={activeTab === "summary"}
+                  count={null}
+                  label="Resumen"
+                  onClick={() => {
+                    setActiveTab("summary");
+                  }}
+                />
+                <DrawerTabButton
+                  active={activeTab === "events"}
+                  count={activeContact?.events.length ?? null}
+                  label="Eventos"
+                  onClick={() => {
+                    setActiveTab("events");
+                  }}
+                />
+                <DrawerTabButton
+                  active={activeTab === "notes"}
+                  count={activeContact?.notes.length ?? null}
+                  label="Notas"
+                  onClick={() => {
+                    setActiveTab("notes");
+                  }}
+                />
+                <DrawerTabButton
+                  active={activeTab === "tasks"}
+                  count={activeContact?.tasks.length ?? null}
+                  label="Tareas"
+                  onClick={() => {
+                    setActiveTab("tasks");
+                  }}
+                />
+                <DrawerTabButton
+                  active={activeTab === "reminders"}
+                  count={activeContact?.reminders.length ?? null}
+                  label="Recordatorios"
+                  onClick={() => {
+                    setActiveTab("reminders");
+                  }}
+                />
+              </div>
+
               {isDetailLoading && !activeContact ? (
-                <div className="mt-8 rounded-[1.5rem] border border-dashed border-stone-300 bg-white px-5 py-10 text-center text-sm text-stone-500">
-                  Cargando detalle del contacto...
-                </div>
-              ) : detailError ? (
-                <div className="mt-8 rounded-[1.5rem] border border-dashed border-stone-300 bg-white px-5 py-10 text-center text-sm text-stone-600">
-                  No pudimos cargar el detalle completo del contacto. Reintenta cuando la API local este disponible.
-                </div>
+                <EmptyBlock className="mt-6" message="Cargando detalle del contacto..." />
+              ) : detailError && !activeContact ? (
+                <EmptyBlock className="mt-6" message="No pudimos cargar el detalle del contacto." />
               ) : activeContact ? (
-                <div className="mt-6 space-y-6">
-                  {drawerNotice ? <NoticeBanner notice={drawerNotice} /> : null}
+                <div className="mt-6 space-y-5 pb-10">
+                  {activeTab === "summary" ? (
+                    <>
+                      <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                          <MetaPill label="Lifecycle" value={getCrmLifecycleStatusLabel(activeContact.lifecycleStatus)} />
+                          <MetaPill label="Origen" value={getCrmSourceLabel(activeContact.source)} />
+                          <MetaPill label="Edad" value={getCrmAgeRangeLabel(activeContact.ageRange)} />
+                          <MetaPill label="Marketing" value={activeContact.acceptedMarketing ? "Aceptado" : "No aceptado"} />
+                        </div>
 
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="space-y-2">
-                        <p className="text-lg font-semibold text-stone-900">{buildCrmContactName(activeContact)}</p>
-                        {activeContact.whatsapp ? (
-                          <a
-                            className="inline-flex items-center gap-2 text-sm font-medium text-[#1a6f4e] transition hover:text-[#14553c]"
-                            href={buildCrmWhatsAppHref(activeContact.whatsapp, buildCrmContactName(activeContact))}
-                            rel="noreferrer"
-                            target="_blank"
+                        <div className="mt-5 flex flex-wrap gap-3">
+                          {activeContact.whatsapp ? (
+                            <a
+                              className="inline-flex items-center justify-center gap-2 rounded-full border border-[#cfe0df] bg-[#eef8f7] px-5 py-3 text-sm font-semibold text-[#2c6160] transition hover:border-[#98b8b6]"
+                              href={buildCrmWhatsAppHref(activeContact.whatsapp, activeContact.firstName)}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              <WhatsAppIcon className="h-4 w-4" />
+                              WhatsApp
+                            </a>
+                          ) : null}
+                          {activeContact.email ? (
+                            <a
+                              className="inline-flex items-center justify-center gap-2 rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-500"
+                              href={`mailto:${activeContact.email}`}
+                            >
+                              <ArrowUpRightIcon className="h-4 w-4" />
+                              Email
+                            </a>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          <MetaPill label="Tipo de piel" value={getCrmSkinTypeLabel(activeContact.skinType)} />
+                          <MetaPill label="Objetivo" value={getCrmMainGoalLabel(activeContact.mainGoal)} />
+                          <MetaPill label="Primera actividad" value={formatDateTime(activeContact.firstSeenAt)} />
+                          <MetaPill label="Ultima actividad" value={formatDateTime(activeContact.lastSeenAt)} />
+                        </div>
+                      </section>
+
+                      <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="space-y-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Perfil editable</p>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <label className="space-y-2">
+                                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Lifecycle</span>
+                                <select
+                                  className="w-full rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+                                  onChange={(event) => {
+                                    setDraftLifecycleStatus(event.target.value as CRMContactLifecycleStatus);
+                                  }}
+                                  value={draftLifecycleStatus}
+                                >
+                                  {CRM_LIFECYCLE_STATUS_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="flex items-center gap-3 rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-800">
+                                <input
+                                  checked={draftAcceptedMarketing}
+                                  className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-300"
+                                  onChange={(event) => {
+                                    setDraftAcceptedMarketing(event.target.checked);
+                                  }}
+                                  type="checkbox"
+                                />
+                                Acepta marketing
+                              </label>
+                            </div>
+                          </div>
+                          <button
+                            className="rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={isSavingProfile}
+                            onClick={() => {
+                              void handleSaveProfile();
+                            }}
+                            type="button"
                           >
-                            <WhatsAppIcon className="h-4 w-4" />
-                            {activeContact.whatsapp}
-                          </a>
+                            {isSavingProfile ? "Guardando..." : hasProfileChanges ? "Guardar cambios" : "Sin cambios"}
+                          </button>
+                        </div>
+                      </section>
+
+                      <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Resumen comercial</p>
+                        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          <MetaPill label="Pedidos" value={String(activeContact.purchaseSummary.orderCount)} />
+                          <MetaPill label="Total gastado" value={formatCurrency(activeContact.purchaseSummary.totalSpent)} />
+                          <MetaPill
+                            label="Ultima compra"
+                            value={
+                              activeContact.purchaseSummary.lastOrderAt
+                                ? formatDateTime(activeContact.purchaseSummary.lastOrderAt)
+                                : "Sin compra"
+                            }
+                          />
+                          <MetaPill
+                            label="Ultima orden"
+                            value={activeContact.purchaseSummary.lastOrderNumber ?? "Sin orden"}
+                          />
+                        </div>
+                      </section>
+                    </>
+                  ) : null}
+
+                  {activeTab === "events" ? (
+                    <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Eventos</p>
+                          <h3 className="mt-2 font-serif text-2xl text-stone-900">Linea de tiempo reciente</h3>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 space-y-3">
+                        {activeContact.events.length === 0 ? (
+                          <EmptyBlock message="Todavia no hay eventos CRM registrados para este contacto." />
                         ) : (
-                          <p className="text-sm text-stone-500">Sin WhatsApp registrado</p>
-                        )}
-                        {activeContact.email ? (
-                          <a className="text-sm text-stone-700 underline-offset-4 hover:underline" href={`mailto:${activeContact.email}`}>
-                            {activeContact.email}
-                          </a>
-                        ) : (
-                          <p className="text-sm text-stone-500">Sin email registrado</p>
-                        )}
-                      </div>
-
-                      <span
-                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getLifecycleBadgeClasses(activeContact.lifecycleStatus)}`}
-                      >
-                        {getCrmLifecycleStatusLabel(activeContact.lifecycleStatus)}
-                      </span>
-                    </div>
-
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      <MetaPill label="Piel" value={getCrmSkinTypeLabel(activeContact.skinType)} />
-                      <MetaPill label="Objetivo" value={getCrmMainGoalLabel(activeContact.mainGoal)} />
-                      <MetaPill label="Edad" value={getCrmAgeRangeLabel(activeContact.ageRange)} />
-                      <MetaPill label="Source" value={getCrmSourceLabel(activeContact.source)} />
-                      <MetaPill label="Primera visita" value={formatDateTime(activeContact.firstSeenAt)} />
-                      <MetaPill label="Ultima actividad" value={formatDateTime(activeContact.lastSeenAt)} />
-                    </div>
-                  </section>
-
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Resumen de compras</p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <MetaPill label="Ordenes" value={String(activeContact.purchaseSummary.orderCount)} />
-                      <MetaPill label="Total" value={formatCurrency(activeContact.purchaseSummary.totalSpent)} />
-                      <MetaPill
-                        label="Ultima orden"
-                        value={activeContact.purchaseSummary.lastOrderNumber ?? "Sin orden"}
-                      />
-                      <MetaPill
-                        label="Fecha"
-                        value={
-                          activeContact.purchaseSummary.lastOrderAt
-                            ? formatDateTime(activeContact.purchaseSummary.lastOrderAt)
-                            : "Sin compra"
-                        }
-                      />
-                    </div>
-                  </section>
-
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
-                          Perfil comercial
-                        </p>
-                        <h3 className="mt-2 font-serif text-2xl text-stone-900">Status y consentimiento</h3>
-                      </div>
-                      <span
-                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getLifecycleBadgeClasses(draftLifecycleStatus)}`}
-                      >
-                        {getCrmLifecycleStatusLabel(draftLifecycleStatus)}
-                      </span>
-                    </div>
-
-                    <div className="mt-5 grid gap-4">
-                      <label className="space-y-2">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Status</span>
-                        <select
-                          className="w-full rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
-                          onChange={(event) => {
-                            setDraftLifecycleStatus(event.target.value as CRMContactLifecycleStatus);
-                          }}
-                          value={draftLifecycleStatus}
-                        >
-                          {CRM_LIFECYCLE_STATUS_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label className="flex items-center gap-3 rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-4 text-sm text-stone-700">
-                        <input
-                          checked={draftAcceptedMarketing}
-                          className="h-4 w-4 accent-stone-900"
-                          onChange={(event) => {
-                            setDraftAcceptedMarketing(event.target.checked);
-                          }}
-                          type="checkbox"
-                        />
-                        Consentimiento de marketing activo
-                      </label>
-
-                      <div className="flex justify-end">
-                        <button
-                          className="inline-flex items-center justify-center rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
-                          disabled={isSavingProfile}
-                          onClick={() => {
-                            void handleSaveProfile();
-                          }}
-                          type="button"
-                        >
-                          {isSavingProfile ? "Guardando..." : hasProfileChanges ? "Guardar cambios" : "Sin cambios pendientes"}
-                        </button>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
-                        Recordatorios
-                      </p>
-                      <h3 className="mt-2 font-serif text-2xl text-stone-900">Proximos seguimientos</h3>
-                    </div>
-
-                    <div className="mt-5 space-y-3">
-                      {activeContact.reminders.length === 0 ? (
-                        <EmptyBlock message="Todavia no hay recordatorios CRM para este contacto." />
-                      ) : (
-                        activeContact.reminders.map((reminder) => (
-                          <article className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4" key={reminder.id}>
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                              <div>
-                                <p className="text-sm font-semibold text-stone-900">
-                                  {getCrmReminderTypeLabel(reminder.reminderType)}
-                                </p>
-                                <p className="mt-1 text-xs leading-6 text-stone-500">
-                                  {getCrmReminderChannelLabel(reminder.channel)}
-                                  {` · ${formatDateTime(reminder.scheduledFor)}`}
-                                </p>
+                          activeContact.events.map((event) => (
+                            <article className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4" key={event.id}>
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                  <p className="text-sm font-semibold text-stone-900">{getCrmEventLabel(event.eventType)}</p>
+                                  <p className="mt-1 text-xs leading-6 text-stone-500">{getCrmSourceLabel(event.source)}</p>
+                                </div>
+                                <span className="text-xs text-stone-500">{formatDateTime(event.createdAt)}</span>
                               </div>
-                              <span
-                                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getReminderBadgeClasses(reminder.status)}`}
-                              >
-                                {getCrmReminderStatusLabel(reminder.status)}
-                              </span>
-                            </div>
+                              <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-[1rem] bg-white px-3 py-3 text-xs leading-6 text-stone-600">
+                                {JSON.stringify(event.payloadJson, null, 2)}
+                              </pre>
+                            </article>
+                          ))
+                        )}
+                      </div>
+                    </section>
+                  ) : null}
 
-                            <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">
-                              {reminder.renderedBody}
-                            </p>
+                  {activeTab === "notes" ? (
+                    <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Notas</p>
+                        <h3 className="mt-2 font-serif text-2xl text-stone-900">Seguimiento interno</h3>
+                      </div>
 
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              {reminder.channel === "whatsapp" && activeContact.whatsapp ? (
-                                <a
-                                  className="rounded-full border border-[#cfe0df] bg-[#eef8f7] px-4 py-2 text-xs font-semibold text-[#2c6160] transition hover:border-[#98b8b6]"
-                                  href={buildCrmReminderWhatsAppHref(activeContact.whatsapp, reminder.renderedBody)}
-                                  rel="noreferrer"
-                                  target="_blank"
-                                >
-                                  Abrir WhatsApp
-                                </a>
-                              ) : null}
-                              {reminder.channel === "email" && activeContact.email ? (
-                                <a
-                                  className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 transition hover:border-stone-500"
-                                  href={buildCrmReminderMailtoHref(
-                                    activeContact.email,
-                                    reminder.renderedSubject,
-                                    reminder.renderedBody,
-                                  )}
-                                >
-                                  Abrir email
-                                </a>
-                              ) : null}
-                            </div>
-                          </article>
-                        ))
-                      )}
-                    </div>
+                      <div className="mt-5 space-y-3">
+                        {activeContact.notes.length === 0 ? (
+                          <EmptyBlock message="Todavia no hay notas internas para este contacto." />
+                        ) : (
+                          activeContact.notes.map((note) => (
+                            <article className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4" key={note.id}>
+                              <p className="text-sm leading-7 text-stone-800">{note.note}</p>
+                              <p className="mt-2 text-xs text-stone-500">{formatDateTime(note.createdAt)}</p>
+                            </article>
+                          ))
+                        )}
+                      </div>
 
-                    <div className="mt-5 grid gap-3">
-                      <div className="grid gap-3 lg:grid-cols-[220px_220px_1fr]">
-                        <select
-                          className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+                      <div className="mt-5 grid gap-3">
+                        <textarea
+                          className="min-h-32 w-full rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm leading-7 text-stone-900 outline-none transition focus:border-stone-500"
+                          maxLength={4000}
                           onChange={(event) => {
-                            setReminderChannelDraft(event.target.value as CRMReminderChannel);
+                            setNoteDraft(event.target.value);
                           }}
-                          value={reminderChannelDraft}
-                        >
-                          {CRM_REMINDER_CHANNEL_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                          placeholder="Ejemplo: pidio seguimiento por WhatsApp en horario vespertino."
+                          value={noteDraft}
+                        />
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs text-stone-500">{noteDraft.length}/4000 caracteres</p>
+                          <button
+                            className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={isSubmittingNote}
+                            onClick={() => {
+                              void handleCreateNote();
+                            }}
+                            type="button"
+                          >
+                            {isSubmittingNote ? "Guardando..." : "Crear nota"}
+                          </button>
+                        </div>
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {activeTab === "tasks" ? (
+                    <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Tareas</p>
+                        <h3 className="mt-2 font-serif text-2xl text-stone-900">Pendientes comerciales</h3>
+                      </div>
+
+                      <div className="mt-5 space-y-3">
+                        {activeContact.tasks.length === 0 ? (
+                          <EmptyBlock message="Todavia no hay tareas para este contacto." />
+                        ) : (
+                          activeContact.tasks.map((task) => (
+                            <article className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4" key={task.id}>
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                  <p className="text-sm font-semibold text-stone-900">{task.title}</p>
+                                  <p className="mt-1 text-xs leading-6 text-stone-500">
+                                    {getCrmTaskTypeLabel(task.taskType)}
+                                    {task.dueAt ? ` / vence ${formatDateTime(task.dueAt)}` : ""}
+                                  </p>
+                                </div>
+                                <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getTaskBadgeClasses(task.status)}`}>
+                                  {getCrmTaskStatusLabel(task.status)}
+                                </span>
+                              </div>
+
+                              {task.status === "pending" ? (
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                  <button
+                                    className="rounded-full border border-[#d8e3cf] bg-[#f3faf0] px-4 py-2 text-xs font-semibold text-[#476638] transition hover:border-[#9fb98f] disabled:cursor-not-allowed disabled:opacity-60"
+                                    disabled={taskActionId === task.id}
+                                    onClick={() => {
+                                      void handleTaskStatusChange(task.id, "done");
+                                    }}
+                                    type="button"
+                                  >
+                                    {taskActionId === task.id ? "Actualizando..." : "Marcar hecha"}
+                                  </button>
+                                  <button
+                                    className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                    disabled={taskActionId === task.id}
+                                    onClick={() => {
+                                      void handleTaskStatusChange(task.id, "cancelled");
+                                    }}
+                                    type="button"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              ) : (
+                                <p className="mt-3 text-xs text-stone-500">
+                                  {task.completedAt ? `Actualizada ${formatDateTime(task.completedAt)}` : "Sin fecha de cierre"}
+                                </p>
+                              )}
+                            </article>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_220px_220px_auto]">
                         <input
                           className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
                           onChange={(event) => {
-                            setReminderScheduledForDraft(event.target.value);
+                            setTaskTitleDraft(event.target.value);
+                          }}
+                          placeholder="Titulo de la tarea"
+                          value={taskTitleDraft}
+                        />
+                        <input
+                          className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+                          onChange={(event) => {
+                            setTaskDueAtDraft(event.target.value);
                           }}
                           type="datetime-local"
-                          value={reminderScheduledForDraft}
+                          value={taskDueAtDraft}
                         />
-                        <input
+                        <select
                           className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
                           onChange={(event) => {
-                            setReminderSubjectDraft(event.target.value);
+                            setTaskTypeDraft(event.target.value as CRMTaskType);
                           }}
-                          placeholder="Subject opcional para email"
-                          value={reminderSubjectDraft}
-                        />
-                      </div>
-                      <textarea
-                        className="min-h-28 w-full rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm leading-7 text-stone-900 outline-none transition focus:border-stone-500"
-                        maxLength={4000}
-                        onChange={(event) => {
-                          setReminderBodyDraft(event.target.value);
-                        }}
-                        placeholder="Mensaje manual de seguimiento."
-                        value={reminderBodyDraft}
-                      />
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs text-stone-500">{reminderBodyDraft.length}/4000 caracteres</p>
+                          value={taskTypeDraft}
+                        >
+                          {CRM_TASK_TYPE_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                         <button
                           className="rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
-                          disabled={isSubmittingReminder}
+                          disabled={isSubmittingTask}
                           onClick={() => {
-                            void handleCreateReminder();
+                            void handleCreateTask();
                           }}
                           type="button"
                         >
-                          {isSubmittingReminder ? "Creando..." : "Crear recordatorio manual"}
+                          {isSubmittingTask ? "Creando..." : "Crear tarea"}
                         </button>
                       </div>
-                    </div>
-                  </section>
+                    </section>
+                  ) : null}
 
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Eventos recientes</p>
-                    <div className="mt-4 space-y-3">
-                      {activeContact.events.length === 0 ? (
-                        <EmptyBlock message="Todavia no hay eventos CRM registrados para este contacto." />
-                      ) : (
-                        activeContact.events.map((event) => (
-                          <article className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4" key={event.id}>
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                              <div>
-                                <p className="text-sm font-semibold text-stone-900">{getCrmEventLabel(event.eventType)}</p>
-                                <p className="mt-1 text-xs leading-6 text-stone-500">{getCrmSourceLabel(event.source)}</p>
-                              </div>
-                              <span className="text-xs text-stone-500">{formatDateTime(event.createdAt)}</span>
-                            </div>
-                            <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-[1rem] bg-white px-3 py-3 text-xs leading-6 text-stone-600">
-                              {JSON.stringify(event.payloadJson, null, 2)}
-                            </pre>
-                          </article>
-                        ))
-                      )}
-                    </div>
-                  </section>
-
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Notas internas</p>
-                      <h3 className="mt-2 font-serif text-2xl text-stone-900">Seguimiento del equipo</h3>
-                    </div>
-
-                    <div className="mt-5 space-y-3">
-                      {activeContact.notes.length === 0 ? (
-                        <EmptyBlock message="Todavia no hay notas internas para este contacto." />
-                      ) : (
-                        activeContact.notes.map((note) => (
-                          <article className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4" key={note.id}>
-                            <p className="text-sm leading-7 text-stone-800">{note.note}</p>
-                            <p className="mt-2 text-xs text-stone-500">{formatDateTime(note.createdAt)}</p>
-                          </article>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="mt-5 grid gap-3">
-                      <textarea
-                        className="min-h-32 w-full rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm leading-7 text-stone-900 outline-none transition focus:border-stone-500"
-                        maxLength={4000}
-                        onChange={(event) => {
-                          setNoteDraft(event.target.value);
-                        }}
-                        placeholder="Ejemplo: pidio seguimiento por WhatsApp en horario vespertino."
-                        value={noteDraft}
-                      />
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs text-stone-500">{noteDraft.length}/4000 caracteres</p>
-                        <button
-                          className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
-                          disabled={isSubmittingNote}
-                          onClick={() => {
-                            void handleCreateNote();
-                          }}
-                          type="button"
-                        >
-                          {isSubmittingNote ? "Guardando..." : "Crear nota"}
-                        </button>
+                  {activeTab === "reminders" ? (
+                    <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Recordatorios</p>
+                        <h3 className="mt-2 font-serif text-2xl text-stone-900">Seguimiento multicanal</h3>
                       </div>
-                    </div>
-                  </section>
 
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Tareas</p>
-                      <h3 className="mt-2 font-serif text-2xl text-stone-900">Pendientes comerciales</h3>
-                    </div>
-
-                    <div className="mt-5 space-y-3">
-                      {activeContact.tasks.length === 0 ? (
-                        <EmptyBlock message="Todavia no hay tareas abiertas para este contacto." />
-                      ) : (
-                        activeContact.tasks.map((task) => (
-                          <article className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4" key={task.id}>
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                              <div>
-                                <p className="text-sm font-semibold text-stone-900">{task.title}</p>
-                                <p className="mt-1 text-xs leading-6 text-stone-500">
-                                  {getCrmTaskTypeLabel(task.taskType)}
-                                  {task.dueAt ? ` · vence ${formatDateTime(task.dueAt)}` : ""}
-                                </p>
+                      <div className="mt-5 space-y-3">
+                        {activeContact.reminders.length === 0 ? (
+                          <EmptyBlock message="Todavia no hay recordatorios programados para este contacto." />
+                        ) : (
+                          activeContact.reminders.map((reminder) => (
+                            <article className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4" key={reminder.id}>
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                  <p className="text-sm font-semibold text-stone-900">
+                                    {getCrmReminderTypeLabel(reminder.reminderType)}
+                                  </p>
+                                  <p className="mt-1 text-xs leading-6 text-stone-500">
+                                    {getCrmReminderChannelLabel(reminder.channel)}
+                                    {` / ${formatDateTime(reminder.scheduledFor)}`}
+                                  </p>
+                                </div>
+                                <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getReminderBadgeClasses(reminder.status)}`}>
+                                  {getCrmReminderStatusLabel(reminder.status)}
+                                </span>
                               </div>
-                              <span
-                                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getTaskBadgeClasses(task.status)}`}
-                              >
-                                {getCrmTaskStatusLabel(task.status)}
-                              </span>
-                            </div>
 
-                            {task.status === "pending" ? (
+                              {reminder.renderedSubject ? (
+                                <p className="mt-3 text-sm font-semibold text-stone-900">{reminder.renderedSubject}</p>
+                              ) : null}
+                              <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-stone-700">{reminder.renderedBody}</p>
+
                               <div className="mt-4 flex flex-wrap gap-2">
-                                <button
-                                  className="rounded-full border border-[#d8e3cf] bg-[#f3faf0] px-4 py-2 text-xs font-semibold text-[#476638] transition hover:border-[#9fb98f] disabled:cursor-not-allowed disabled:opacity-60"
-                                  disabled={taskActionId === task.id}
-                                  onClick={() => {
-                                    void handleTaskStatusChange(task.id, "done");
-                                  }}
-                                  type="button"
-                                >
-                                  {taskActionId === task.id ? "Actualizando..." : "Marcar hecha"}
-                                </button>
-                                <button
-                                  className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
-                                  disabled={taskActionId === task.id}
-                                  onClick={() => {
-                                    void handleTaskStatusChange(task.id, "cancelled");
-                                  }}
-                                  type="button"
-                                >
-                                  Cancelar
-                                </button>
+                                {reminder.channel === "whatsapp" && activeContact.whatsapp ? (
+                                  <a
+                                    className="rounded-full border border-[#cfe0df] bg-[#eef8f7] px-4 py-2 text-xs font-semibold text-[#2c6160] transition hover:border-[#98b8b6]"
+                                    href={buildCrmReminderWhatsAppHref(activeContact.whatsapp, reminder.renderedBody)}
+                                    rel="noreferrer"
+                                    target="_blank"
+                                  >
+                                    Abrir WhatsApp
+                                  </a>
+                                ) : null}
+                                {reminder.channel === "email" && activeContact.email ? (
+                                  <a
+                                    className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 transition hover:border-stone-500"
+                                    href={buildCrmReminderMailtoHref(activeContact.email, reminder.renderedSubject, reminder.renderedBody)}
+                                  >
+                                    Abrir email
+                                  </a>
+                                ) : null}
                               </div>
-                            ) : (
-                              <p className="mt-3 text-xs text-stone-500">
-                                {task.completedAt ? `Actualizada ${formatDateTime(task.completedAt)}` : "Sin fecha de cierre"}
-                              </p>
-                            )}
-                          </article>
-                        ))
-                      )}
-                    </div>
+                            </article>
+                          ))
+                        )}
+                      </div>
 
-                    <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_220px_220px_auto]">
-                      <input
-                        className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
-                        onChange={(event) => {
-                          setTaskTitleDraft(event.target.value);
-                        }}
-                        placeholder="Titulo de la tarea"
-                        value={taskTitleDraft}
-                      />
-                      <input
-                        className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
-                        onChange={(event) => {
-                          setTaskDueAtDraft(event.target.value);
-                        }}
-                        type="datetime-local"
-                        value={taskDueAtDraft}
-                      />
-                      <select
-                        className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
-                        onChange={(event) => {
-                          setTaskTypeDraft(event.target.value as CRMTaskType);
-                        }}
-                        value={taskTypeDraft}
-                      >
-                        {CRM_TASK_TYPE_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        className="rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={isSubmittingTask}
-                        onClick={() => {
-                          void handleCreateTask();
-                        }}
-                        type="button"
-                      >
-                        {isSubmittingTask ? "Creando..." : "Crear tarea"}
-                      </button>
-                    </div>
-                  </section>
+                      <div className="mt-5 grid gap-3">
+                        <div className="grid gap-3 lg:grid-cols-[220px_220px_1fr]">
+                          <select
+                            className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+                            onChange={(event) => {
+                              setReminderChannelDraft(event.target.value as CRMReminderChannel);
+                            }}
+                            value={reminderChannelDraft}
+                          >
+                            {CRM_REMINDER_CHANNEL_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+                            onChange={(event) => {
+                              setReminderScheduledForDraft(event.target.value);
+                            }}
+                            type="datetime-local"
+                            value={reminderScheduledForDraft}
+                          />
+                          <input
+                            className="rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+                            onChange={(event) => {
+                              setReminderSubjectDraft(event.target.value);
+                            }}
+                            placeholder="Subject opcional para email"
+                            value={reminderSubjectDraft}
+                          />
+                        </div>
+                        <textarea
+                          className="min-h-28 w-full rounded-[1.2rem] border border-stone-200 bg-[#fffaf7] px-4 py-3 text-sm leading-7 text-stone-900 outline-none transition focus:border-stone-500"
+                          maxLength={4000}
+                          onChange={(event) => {
+                            setReminderBodyDraft(event.target.value);
+                          }}
+                          placeholder="Mensaje manual de seguimiento."
+                          value={reminderBodyDraft}
+                        />
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs text-stone-500">{reminderBodyDraft.length}/4000 caracteres</p>
+                          <button
+                            className="rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={isSubmittingReminder}
+                            onClick={() => {
+                              void handleCreateReminder();
+                            }}
+                            type="button"
+                          >
+                            {isSubmittingReminder ? "Creando..." : "Crear recordatorio"}
+                          </button>
+                        </div>
+                      </div>
+                    </section>
+                  ) : null}
                 </div>
               ) : null}
             </aside>
@@ -1357,6 +1457,37 @@ export function CrmPage() {
         </div>
       ) : null}
     </>
+  );
+}
+
+function DrawerTabButton({
+  active,
+  count,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  count: number | null;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+        active
+          ? "border-stone-900 bg-stone-900 text-white"
+          : "border-stone-200 bg-white text-stone-700 hover:border-stone-400"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      <span>{label}</span>
+      {count !== null ? (
+        <span className={`rounded-full px-2 py-0.5 text-[11px] ${active ? "bg-white/15 text-white" : "bg-stone-100 text-stone-600"}`}>
+          {count}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -1391,6 +1522,14 @@ function FilterSelect({
   );
 }
 
+function MetricPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700">
+      <span className="font-semibold text-stone-900">{value}</span> {label}
+    </div>
+  );
+}
+
 function MetaPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4">
@@ -1400,9 +1539,70 @@ function MetaPill({ label, value }: { label: string; value: string }) {
   );
 }
 
-function EmptyBlock({ message }: { message: string }) {
+function PaginationFooter({
+  currentPage,
+  disabled,
+  onNext,
+  onPrevious,
+  total,
+  totalPages,
+}: {
+  currentPage: number;
+  disabled: boolean;
+  onNext: () => void;
+  onPrevious: () => void;
+  total: number;
+  totalPages: number;
+}) {
   return (
-    <div className="rounded-[1.2rem] border border-dashed border-stone-300 bg-white px-4 py-5 text-sm leading-7 text-stone-500">
+    <div className="mt-4 flex flex-col gap-3 border-t border-stone-200 pt-4 text-sm text-stone-600 sm:flex-row sm:items-center sm:justify-between">
+      <p>{total} contactos encontrados</p>
+      <div className="flex items-center gap-3">
+        <button
+          className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={disabled || currentPage <= 1}
+          onClick={onPrevious}
+          type="button"
+        >
+          Anterior
+        </button>
+        <span>
+          Pagina {currentPage} de {Math.max(1, totalPages)}
+        </span>
+        <button
+          className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={disabled || currentPage >= totalPages}
+          onClick={onNext}
+          type="button"
+        >
+          Siguiente
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonRow() {
+  return (
+    <tr className="animate-pulse">
+      {Array.from({ length: 9 }).map((_, index) => (
+        <td className="px-4 py-4" key={index}>
+          <div className="h-4 rounded-full bg-stone-100" />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+function EmptyBlock({
+  className = "",
+  message,
+}: {
+  className?: string;
+  message: string;
+}) {
+  return (
+    <div className={`${className} rounded-[1.2rem] border border-dashed border-stone-300 bg-white px-4 py-5 text-sm leading-7 text-stone-500`}>
       {message}
     </div>
   );

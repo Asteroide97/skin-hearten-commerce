@@ -12,7 +12,7 @@ from app.schemas.crm import (
     CRMAutomationRuleUpdate,
     CRMAutomationRunRead,
     CRMContactDetailRead,
-    CRMContactSummaryRead,
+    CRMContactPageRead,
     CRMContactUpdate,
     CRMLifecycleStatus,
     CRMMessageTemplatePreviewRequest,
@@ -72,25 +72,35 @@ def _parse_optional_date(value: str | None, field_name: str) -> date | None:
         ) from exc
 
 
-@router.get("/contacts", response_model=list[CRMContactSummaryRead])
+@router.get("/contacts", response_model=CRMContactPageRead)
 def list_admin_crm_contacts(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, alias="pageSize", ge=1, le=100),
     search: str | None = Query(default=None),
+    sort_by: str = Query(default="lastSeenAt", alias="sortBy"),
+    sort_dir: str = Query(default="desc", alias="sortDir", pattern="^(asc|desc)$"),
     lifecycle_status: CRMLifecycleStatus | None = Query(default=None, alias="lifecycle_status"),
+    has_orders: bool | None = Query(default=None, alias="has_orders"),
     skin_type: str | None = Query(default=None),
     main_goal: str | None = Query(default=None),
     accepted_marketing: bool | None = Query(default=None),
     _: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
-) -> list[CRMContactSummaryRead]:
+) -> CRMContactPageRead:
     contacts = list_crm_contact_summaries(
         db,
         accepted_marketing=accepted_marketing,
+        has_orders=has_orders,
         lifecycle_status=lifecycle_status,
         main_goal=main_goal,
+        page=page,
+        page_size=page_size,
         search=search,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
         skin_type=skin_type,
     )
-    return [CRMContactSummaryRead.model_validate(contact) for contact in contacts]
+    return CRMContactPageRead.model_validate(contacts)
 
 
 @router.get("/contacts/{contact_id}", response_model=CRMContactDetailRead)

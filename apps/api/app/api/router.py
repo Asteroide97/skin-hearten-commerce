@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
+    admin_customers,
     admin_reviews,
     admin_imports,
     admin_crm,
@@ -46,6 +47,7 @@ api_router.include_router(admin_products.router, tags=["admin-products"])
 api_router.include_router(admin_categories.router, tags=["admin-categories"])
 api_router.include_router(admin_brands.router, tags=["admin-brands"])
 api_router.include_router(admin_coupons.router, tags=["admin-coupons"])
+api_router.include_router(admin_customers.router, tags=["admin-customers"])
 api_router.include_router(admin_orders.router, tags=["admin-orders"])
 api_router.include_router(admin_reviews.router, tags=["admin-reviews"])
 api_router.include_router(admin_crm.router, tags=["admin-crm"])

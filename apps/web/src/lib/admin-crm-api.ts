@@ -7,7 +7,7 @@ import type {
   CRMAutomationRun,
   CRMContactDetail,
   CRMContactFilters,
-  CRMContactSummary,
+  PaginatedCRMContactsResponse,
   CRMContactUpdateInput,
   CRMMessageTemplate,
   CRMMessageTemplatePreviewInput,
@@ -26,7 +26,7 @@ import type {
 } from "@/lib/admin-crm";
 
 export async function listAdminCrmContacts(filters?: CRMContactFilters) {
-  return requestAdminJson<CRMContactSummary[]>("/admin/crm/contacts", { query: filters });
+  return requestAdminJson<PaginatedCRMContactsResponse>("/admin/crm/contacts", { query: filters });
 }
 
 export async function getAdminCrmContactDetail(contactId: number) {

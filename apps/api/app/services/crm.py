@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -22,6 +23,7 @@ from app.services.crm_reminders import (
 from app.services.mock_store import (
     CUSTOMERS,
     ORDERS,
+    CRM_TASKS,
     create_crm_event as create_mock_crm_event,
     create_crm_note as create_mock_crm_note,
     create_crm_task as create_mock_crm_task,
@@ -693,47 +695,224 @@ def create_task(
     )
 
 
+def _apply_crm_contact_sort(query, *, sort_by: str, sort_dir: str):
+    if sort_by == "contact":
+        if sort_dir == "asc":
+            return query.order_by(
+                func.lower(CRMContact.first_name).asc(),
+                func.lower(func.coalesce(CRMContact.last_name, "")).asc(),
+            )
+        return query.order_by(
+            func.lower(CRMContact.first_name).desc(),
+            func.lower(func.coalesce(CRMContact.last_name, "")).desc(),
+        )
+    if sort_by == "createdAt":
+        return query.order_by(CRMContact.created_at.asc() if sort_dir == "asc" else CRMContact.created_at.desc())
+    if sort_by == "lifecycleStatus":
+        return query.order_by(
+            CRMContact.lifecycle_status.asc() if sort_dir == "asc" else CRMContact.lifecycle_status.desc()
+        )
+    return query.order_by(CRMContact.last_seen_at.asc() if sort_dir == "asc" else CRMContact.last_seen_at.desc())
+
+
 def list_crm_contact_summaries(
     db: Session,
     *,
     accepted_marketing: bool | None = None,
+    has_orders: bool | None = None,
     lifecycle_status: str | None = None,
     main_goal: str | None = None,
+    page: int = 1,
+    page_size: int = 25,
     search: str | None = None,
+    sort_by: str = "lastSeenAt",
+    sort_dir: str = "desc",
     skin_type: str | None = None,
-) -> list[dict[str, Any]]:
+) -> dict[str, Any]:
     try:
         _ensure_crm_tables()
-        contacts = db.query(CRMContact).all()
-        results = []
         normalized_search = search.strip().lower() if search else None
+        base_query = db.query(CRMContact)
 
+        if accepted_marketing is not None:
+            base_query = base_query.filter(CRMContact.accepted_marketing == accepted_marketing)
+        if lifecycle_status:
+            base_query = base_query.filter(CRMContact.lifecycle_status == lifecycle_status)
+        if skin_type:
+            base_query = base_query.filter(CRMContact.skin_type == skin_type)
+        if main_goal:
+            base_query = base_query.filter(CRMContact.main_goal == main_goal)
+        if normalized_search:
+            like_value = f"%{normalized_search}%"
+            base_query = base_query.filter(
+                or_(
+                    func.lower(CRMContact.first_name).like(like_value),
+                    func.lower(func.coalesce(CRMContact.last_name, "")).like(like_value),
+                    func.lower(func.coalesce(CRMContact.email, "")).like(like_value),
+                    func.lower(func.coalesce(CRMContact.whatsapp, "")).like(like_value),
+                )
+            )
+
+        direction = sort_dir if sort_dir in {"asc", "desc"} else "desc"
+        sort_key = sort_by or "lastSeenAt"
+        contacts: list[CRMContact]
+        total = 0
+        fallback_has_orders_by_contact_id: dict[int, bool] = {}
+
+        if has_orders is None:
+            total = base_query.order_by(None).count()
+            contacts = (
+                _apply_crm_contact_sort(base_query, sort_by=sort_key, sort_dir=direction)
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+                .all()
+            )
+        else:
+            try:
+                contact_has_orders = (
+                    db.query(Order.id)
+                    .join(Customer, Customer.id == Order.customer_id)
+                    .filter(
+                        or_(
+                            and_(
+                                CRMContact.email.is_not(None),
+                                Customer.email.is_not(None),
+                                func.lower(Customer.email) == func.lower(CRMContact.email),
+                            ),
+                            and_(
+                                CRMContact.whatsapp.is_not(None),
+                                Customer.phone.is_not(None),
+                                Customer.phone == CRMContact.whatsapp,
+                            ),
+                        )
+                    )
+                    .exists()
+                )
+                filtered_query = base_query.filter(contact_has_orders if has_orders else ~contact_has_orders)
+                total = filtered_query.order_by(None).count()
+                contacts = (
+                    _apply_crm_contact_sort(filtered_query, sort_by=sort_key, sort_dir=direction)
+                    .offset((page - 1) * page_size)
+                    .limit(page_size)
+                    .all()
+                )
+            except SQLAlchemyError:
+                db.rollback()
+                all_contacts = _apply_crm_contact_sort(base_query, sort_by=sort_key, sort_dir=direction).all()
+                matching_contacts: list[CRMContact] = []
+                for contact in all_contacts:
+                    purchase_summary = _serialize_purchase_summary(_contact_to_dict(contact))
+                    contact_has_orders = int(purchase_summary.get("order_count") or 0) > 0
+                    fallback_has_orders_by_contact_id[contact.id] = contact_has_orders
+                    if contact_has_orders == has_orders:
+                        matching_contacts.append(contact)
+
+                total = len(matching_contacts)
+                start = (page - 1) * page_size
+                contacts = matching_contacts[start : start + page_size]
+
+        contact_ids = [contact.id for contact in contacts]
+
+        next_tasks_by_contact_id: dict[int, dict[str, Any]] = {}
+        if contact_ids:
+            pending_tasks = (
+                db.query(CRMTask)
+                .filter(CRMTask.contact_id.in_(contact_ids), CRMTask.status == CRMTaskStatus.PENDING)
+                .order_by(CRMTask.contact_id.asc(), CRMTask.due_at.asc().nullsfirst(), CRMTask.created_at.asc())
+                .all()
+            )
+            for task in pending_tasks:
+                if task.contact_id not in next_tasks_by_contact_id:
+                    next_tasks_by_contact_id[task.contact_id] = {
+                        "id": task.id,
+                        "title": task.title,
+                        "due_at": task.due_at,
+                        "status": str(task.status),
+                        "task_type": str(task.task_type),
+                    }
+
+        has_orders_by_contact_id = dict(fallback_has_orders_by_contact_id)
+
+        try:
+            customer_ids_by_contact_id: dict[int, set[int]] = {contact_id: set() for contact_id in contact_ids}
+            normalized_emails = sorted(
+                {
+                    normalized
+                    for normalized in (_normalize_email(contact.email) for contact in contacts)
+                    if normalized
+                }
+            )
+            raw_phones = sorted({contact.whatsapp for contact in contacts if contact.whatsapp})
+
+            customers: list[Customer] = []
+            if normalized_emails or raw_phones:
+                customer_filters = []
+                if normalized_emails:
+                    customer_filters.append(func.lower(Customer.email).in_(normalized_emails))
+                if raw_phones:
+                    customer_filters.append(Customer.phone.in_(raw_phones))
+                customers = db.query(Customer).filter(or_(*customer_filters)).all()
+
+            order_count_by_customer_id: dict[int, int] = {}
+            if customers:
+                customer_ids = [customer.id for customer in customers]
+                order_counts = (
+                    db.query(Order.customer_id, func.count(Order.id))
+                    .filter(Order.customer_id.in_(customer_ids))
+                    .group_by(Order.customer_id)
+                    .all()
+                )
+                order_count_by_customer_id = {
+                    int(customer_id): int(order_count or 0)
+                    for customer_id, order_count in order_counts
+                }
+
+                for customer in customers:
+                    matched_contact_ids: set[int] = set()
+                    normalized_email = _normalize_email(customer.email)
+                    normalized_phone = _normalize_phone(customer.phone)
+                    for contact in contacts:
+                        if normalized_email and _normalize_email(contact.email) == normalized_email:
+                            matched_contact_ids.add(contact.id)
+                        elif normalized_phone and _normalize_phone(contact.whatsapp) == normalized_phone:
+                            matched_contact_ids.add(contact.id)
+                    for matched_contact_id in matched_contact_ids:
+                        customer_ids_by_contact_id.setdefault(matched_contact_id, set()).add(customer.id)
+
+            for contact in contacts:
+                customer_ids = customer_ids_by_contact_id.get(contact.id, set())
+                has_orders_by_contact_id[contact.id] = any(
+                    order_count_by_customer_id.get(customer_id, 0) > 0 for customer_id in customer_ids
+                )
+        except SQLAlchemyError:
+            db.rollback()
+            for contact in contacts:
+                purchase_summary = _serialize_purchase_summary(_contact_to_dict(contact))
+                has_orders_by_contact_id[contact.id] = int(purchase_summary.get("order_count") or 0) > 0
+
+        items: list[dict[str, Any]] = []
         for contact in contacts:
-            if accepted_marketing is not None and bool(contact.accepted_marketing) != accepted_marketing:
-                continue
-            if lifecycle_status and str(contact.lifecycle_status) != lifecycle_status:
-                continue
-            if skin_type and contact.skin_type != skin_type:
-                continue
-            if main_goal and contact.main_goal != main_goal:
-                continue
-            if normalized_search:
-                haystack = " ".join(
-                    [
-                        contact.first_name or "",
-                        contact.last_name or "",
-                        contact.email or "",
-                        contact.whatsapp or "",
-                    ]
-                ).lower()
-                if normalized_search not in haystack:
-                    continue
-            results.append(_serialize_contact_summary(_contact_to_dict(contact)))
+            summary = _serialize_contact_summary(_contact_to_dict(contact))
+            summary.update(
+                {
+                    "preferred_channel": "whatsapp" if contact.whatsapp else "email" if contact.email else None,
+                    "has_orders": has_orders_by_contact_id.get(contact.id, False),
+                    "next_task": next_tasks_by_contact_id.get(contact.id),
+                }
+            )
+            items.append(summary)
 
-        return sorted(results, key=lambda contact: contact["last_seen_at"], reverse=True)
+        total_pages = max(1, math.ceil(total / page_size)) if page_size > 0 else 1
+        return {
+            "items": items,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+        }
     except SQLAlchemyError:
         db.rollback()
-        return [
+        contacts = [
             _serialize_contact_summary(contact)
             for contact in list_mock_crm_contacts(
                 accepted_marketing=accepted_marketing,
@@ -743,6 +922,72 @@ def list_crm_contact_summaries(
                 skin_type=skin_type,
             )
         ]
+
+        def contact_has_orders(contact: dict[str, Any]) -> bool:
+            purchase_summary = _serialize_purchase_summary(contact)
+            return int(purchase_summary.get("order_count") or 0) > 0
+
+        if has_orders is True:
+            contacts = [contact for contact in contacts if contact_has_orders(contact)]
+        elif has_orders is False:
+            contacts = [contact for contact in contacts if not contact_has_orders(contact)]
+
+        tasks_by_contact_id: dict[int, dict[str, Any]] = {}
+        for task in sorted(
+            [task for task in CRM_TASKS if task.get("status") == "pending"],
+            key=lambda task: (
+                int(task.get("contact_id") or 0),
+                _normalize_datetime(task.get("due_at")) or datetime.min.replace(tzinfo=timezone.utc),
+                _normalize_datetime(task.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc),
+            ),
+        ):
+            contact_id = int(task.get("contact_id") or 0)
+            if contact_id not in tasks_by_contact_id:
+                tasks_by_contact_id[contact_id] = {
+                    "id": int(task["id"]),
+                    "title": str(task.get("title") or ""),
+                    "due_at": _normalize_datetime(task.get("due_at")),
+                    "status": str(task.get("status") or "pending"),
+                    "task_type": str(task.get("task_type") or "manual"),
+                }
+
+        for contact in contacts:
+            contact["preferred_channel"] = "whatsapp" if contact.get("whatsapp") else "email" if contact.get("email") else None
+            contact["has_orders"] = contact_has_orders(contact)
+            contact["next_task"] = tasks_by_contact_id.get(int(contact["id"]))
+
+        reverse = sort_dir == "desc"
+        if sort_by == "contact":
+            contacts.sort(
+                key=lambda contact: (
+                    str(contact.get("first_name") or "").lower(),
+                    str(contact.get("last_name") or "").lower(),
+                ),
+                reverse=reverse,
+            )
+        elif sort_by == "createdAt":
+            contacts.sort(
+                key=lambda contact: contact.get("created_at") or datetime.min.replace(tzinfo=timezone.utc),
+                reverse=reverse,
+            )
+        elif sort_by == "lifecycleStatus":
+            contacts.sort(key=lambda contact: str(contact.get("lifecycle_status") or ""), reverse=reverse)
+        else:
+            contacts.sort(
+                key=lambda contact: contact.get("last_seen_at") or datetime.min.replace(tzinfo=timezone.utc),
+                reverse=reverse,
+            )
+
+        total = len(contacts)
+        total_pages = max(1, math.ceil(total / page_size)) if page_size > 0 else 1
+        start = (page - 1) * page_size
+        return {
+            "items": contacts[start : start + page_size],
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+        }
 
 
 def get_crm_contact_detail(db: Session, contact_id: int) -> dict[str, Any] | None:
