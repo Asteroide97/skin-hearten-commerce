@@ -8,6 +8,7 @@ import { ADMIN_LOGIN_PATH } from "@/lib/admin-session";
 
 const sections = [
   { href: "/admin", label: "Dashboard" },
+  { href: "/admin/intelligence", label: "Centro de Inteligencia" },
   { href: "/admin/productos", label: "Productos" },
   { href: "/admin/cupones", label: "Cupones" },
   { href: "/admin/reviews", label: "Resenas" },
