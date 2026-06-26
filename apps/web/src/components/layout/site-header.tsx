@@ -14,6 +14,7 @@ const navItems = [
   { href: "/productos?problema=Manchas", label: "Manchas" },
   { href: "/productos?problema=Firmeza", label: "Antiedad" },
   { href: "/productos?categoria=protector-solar", label: "Protector solar" },
+  { href: "/reviews", label: "Resenas" },
   { href: "/blog", label: "Blog" },
   { href: "/cuenta", label: "Cuenta" },
 ];

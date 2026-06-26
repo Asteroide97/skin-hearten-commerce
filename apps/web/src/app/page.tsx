@@ -7,6 +7,9 @@ import { SectionHeading } from "@/components/shared/section-heading";
 import { RatingStars } from "@/components/shared/rating-stars";
 import { NeedCardLink } from "@/components/store/need-card-link";
 import { ProductCard } from "@/components/store/product-card";
+import { ReviewsShowcase } from "@/components/store/reviews-showcase";
+import { createEmptyReviewsSummary } from "@/lib/reviews";
+import { getReviewsSummary } from "@/lib/reviews-api";
 import { getBrands, getProducts } from "@/lib/storefront-api";
 import {
   benefits,
@@ -65,13 +68,18 @@ const organizationJsonLd = {
 };
 
 export default async function HomePage() {
-  const [catalogProducts, storefrontBrands] = await Promise.all([getProducts(), getBrands()]);
+  const [catalogProducts, storefrontBrands, reviewsSummaryResult] = await Promise.all([
+    getProducts(),
+    getBrands(),
+    getReviewsSummary(),
+  ]);
   const featuredSelection = catalogProducts.filter((product) => product.featured).slice(0, 4);
   const bestSellerSelection = catalogProducts.filter((product) => product.bestSeller).slice(0, 3);
   const featured = featuredSelection.length > 0 ? featuredSelection : catalogProducts.slice(0, 4);
   const bestSellers = bestSellerSelection.length > 0 ? bestSellerSelection : catalogProducts.slice(0, 3);
   const featuredPost = blogPosts[0];
   const secondaryPosts = blogPosts.slice(1);
+  const reviewsSummary = reviewsSummaryResult.ok ? reviewsSummaryResult.data : createEmptyReviewsSummary();
 
   return (
     <>
@@ -226,7 +234,7 @@ export default async function HomePage() {
           <SectionHeading
             eyebrow="Productos destacados"
             title="Texturas, activos y beneficios visibles desde la primera pantalla"
-            description="Cards rediseñadas para hacer mas facil comparar, confiar y agregar al carrito desde movil."
+            description="Cards redisenadas para hacer mas facil comparar, confiar y agregar al carrito desde movil."
           />
           <div className="grid gap-6 xl:grid-cols-4">
             {featured.map((product) => (
@@ -316,6 +324,8 @@ export default async function HomePage() {
             ))}
           </div>
         </section>
+
+        <ReviewsShowcase summary={reviewsSummary} />
 
         <section className="space-y-8">
           <SectionHeading

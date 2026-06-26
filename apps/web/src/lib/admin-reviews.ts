@@ -13,6 +13,8 @@ export type AdminProductReview = {
   body: string;
   status: AdminProductReviewStatus;
   source: AdminProductReviewSource;
+  verifiedPurchase: boolean;
+  orderId: number | null;
   createdAt: string;
   approvedAt: string | null;
 };
@@ -22,6 +24,7 @@ export type AdminProductReviewFilters = {
   rating?: number;
   search?: string;
   status?: AdminProductReviewStatus;
+  verifiedPurchase?: boolean;
 };
 
 export type AdminProductReviewUpdateInput = {

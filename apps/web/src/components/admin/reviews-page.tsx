@@ -31,6 +31,7 @@ type Notice =
 
 type StatusFilter = "all" | AdminProductReviewStatus;
 type RatingFilter = "all" | "1" | "2" | "3" | "4" | "5";
+type VerifiedFilter = "all" | "verified" | "unverified";
 
 function getPageMessage(reason: string | null, hasFilters: boolean) {
   if (!reason) {
@@ -72,6 +73,7 @@ export function ReviewsPage() {
   const [productValue, setProductValue] = useState("");
   const [statusValue, setStatusValue] = useState<StatusFilter>("all");
   const [ratingValue, setRatingValue] = useState<RatingFilter>("all");
+  const [verifiedValue, setVerifiedValue] = useState<VerifiedFilter>("all");
 
   const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null);
   const [drawerNotice, setDrawerNotice] = useState<Notice>(null);
@@ -84,7 +86,8 @@ export function ReviewsPage() {
     searchValue.trim().length > 0 ||
     productValue.trim().length > 0 ||
     statusValue !== "all" ||
-    ratingValue !== "all";
+    ratingValue !== "all" ||
+    verifiedValue !== "all";
   const activeReview = selectedReviewId ? reviews.find((review) => review.id === selectedReviewId) ?? null : null;
 
   useEffect(() => {
@@ -116,6 +119,12 @@ export function ReviewsPage() {
         }
         if (ratingValue !== "all") {
           params.set("rating", ratingValue);
+        }
+        if (verifiedValue === "verified") {
+          params.set("verified_purchase", "true");
+        }
+        if (verifiedValue === "unverified") {
+          params.set("verified_purchase", "false");
         }
 
         const requestUrl = params.size > 0 ? `/api/admin/reviews?${params.toString()}` : "/api/admin/reviews";
@@ -150,7 +159,7 @@ export function ReviewsPage() {
     return () => {
       cancelled = true;
     };
-  }, [productValue, ratingValue, searchValue, statusValue]);
+  }, [productValue, ratingValue, searchValue, statusValue, verifiedValue]);
 
   const reviewCountLabel = useMemo(() => {
     return reviews.length === 1 ? "1 resena" : `${reviews.length} resenas`;
@@ -243,7 +252,7 @@ export function ReviewsPage() {
 
           {pageNotice ? <NoticeBanner className="mt-5" notice={pageNotice} /> : null}
 
-          <div className="mt-6 grid gap-3 xl:grid-cols-[1.2fr_1fr_0.8fr_0.8fr]">
+          <div className="mt-6 grid gap-3 xl:grid-cols-[1.2fr_1fr_0.8fr_0.8fr_0.9fr]">
             <FieldFilter
               label="Buscar"
               onChange={setSearchValue}
@@ -278,6 +287,18 @@ export function ReviewsPage() {
               }))}
               value={ratingValue}
             />
+            <SelectFilter
+              label="Verificada"
+              onChange={(value) => {
+                setVerifiedValue(value as VerifiedFilter);
+              }}
+              options={[
+                { value: "all", label: "Todas" },
+                { value: "verified", label: "Compra verificada" },
+                { value: "unverified", label: "No verificada" },
+              ]}
+              value={verifiedValue}
+            />
           </div>
         </section>
 
@@ -296,6 +317,7 @@ export function ReviewsPage() {
                       <th className="px-4 py-4">Clienta</th>
                       <th className="px-4 py-4">Rating</th>
                       <th className="px-4 py-4">Status</th>
+                      <th className="px-4 py-4">Verificacion</th>
                       <th className="px-4 py-4">Source</th>
                       <th className="px-4 py-4">Fecha</th>
                       <th className="px-4 py-4 text-right">Detalle</th>
@@ -321,6 +343,17 @@ export function ReviewsPage() {
                           >
                             {getAdminProductReviewStatusLabel(review.status)}
                           </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          {review.verifiedPurchase ? (
+                            <span className="inline-flex rounded-full border border-[#d8e3cf] bg-[#f3faf0] px-3 py-1 text-xs font-semibold text-[#476638]">
+                              Verificada
+                            </span>
+                          ) : (
+                            <span className="inline-flex rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">
+                              Normal
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-4 text-stone-600">
                           {getAdminProductReviewSourceLabel(review.source)}
@@ -397,11 +430,13 @@ export function ReviewsPage() {
                     <RatingStars rating={activeReview.rating} />
                   </div>
 
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <MetaPill label="Producto" value={activeReview.productName} />
                     <MetaPill label="Slug" value={activeReview.productSlug} />
                     <MetaPill label="Status" value={getAdminProductReviewStatusLabel(activeReview.status)} />
                     <MetaPill label="Source" value={getAdminProductReviewSourceLabel(activeReview.source)} />
+                    <MetaPill label="Verificada" value={activeReview.verifiedPurchase ? "Si" : "No"} />
+                    <MetaPill label="Orden" value={activeReview.orderId ? `#${activeReview.orderId}` : "Sin orden"} />
                   </div>
                 </section>
 

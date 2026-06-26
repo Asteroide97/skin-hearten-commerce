@@ -17,6 +17,7 @@ def list_reviews_admin(
     product: str | None = Query(default=None),
     rating: int | None = Query(default=None, ge=1, le=5),
     search: str | None = Query(default=None),
+    verified_purchase: bool | None = Query(default=None, alias="verified_purchase"),
     _: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ) -> list[AdminProductReviewRead]:
@@ -26,6 +27,7 @@ def list_reviews_admin(
         rating=rating,
         search=search,
         status_value=status_value,
+        verified_purchase=verified_purchase,
     )
     return [AdminProductReviewRead.model_validate(review) for review in reviews]
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { UseFormRegisterReturn } from "react-hook-form";
@@ -127,6 +128,12 @@ export function ProductReviewsSection({
                 <p className="mt-4 text-sm leading-7 text-stone-600">
                   Solo mostramos opiniones aprobadas para cuidar la calidad y autenticidad del storefront.
                 </p>
+                <Link
+                  className="mt-5 inline-flex items-center justify-center rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-900 transition hover:border-stone-500"
+                  href={`/reviews?product=${encodeURIComponent(productRef)}`}
+                >
+                  Ver todas las resenas
+                </Link>
               </>
             ) : (
               <>
@@ -151,6 +158,11 @@ export function ProductReviewsSection({
                     </div>
                     <RatingStars rating={review.rating} />
                   </div>
+                  {review.verifiedPurchase ? (
+                    <span className="mt-4 inline-flex rounded-full border border-[#d8e3cf] bg-[#f3faf0] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#476638]">
+                      Compra verificada
+                    </span>
+                  ) : null}
                   {review.title ? (
                     <h3 className="mt-4 text-lg font-semibold text-stone-900">{review.title}</h3>
                   ) : null}
@@ -172,6 +184,12 @@ export function ProductReviewsSection({
             <p className="mt-3 text-sm leading-7 text-stone-600">
               Tu comentario se revisa antes de publicarse. No mostramos tu email en storefront.
             </p>
+            <Link
+              className="mt-4 inline-flex items-center rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-900 transition hover:border-stone-500"
+              href={`/reviews/escribir?product=${encodeURIComponent(productRef)}`}
+            >
+              Escribir resena verificada
+            </Link>
           </div>
 
           <form className="mt-6 space-y-5" onSubmit={form.handleSubmit(handleSubmit)}>

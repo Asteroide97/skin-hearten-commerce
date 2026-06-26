@@ -24,6 +24,7 @@ from app.api.routes import (
     payments,
     product_reviews,
     products,
+    reviews,
     skin_quiz,
 )
 
@@ -53,5 +54,6 @@ __all__ = [
     "payments",
     "product_reviews",
     "products",
+    "reviews",
     "skin_quiz",
 ]

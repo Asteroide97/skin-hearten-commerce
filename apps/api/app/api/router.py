@@ -26,12 +26,14 @@ from app.api.routes import (
     payments,
     product_reviews,
     products,
+    reviews,
     skin_quiz,
 )
 
 api_router = APIRouter()
 api_router.include_router(auth.router, tags=["auth"])
 api_router.include_router(product_reviews.router, tags=["product-reviews"])
+api_router.include_router(reviews.router, tags=["reviews"])
 api_router.include_router(products.router, tags=["products"])
 api_router.include_router(categories.router, tags=["categories"])
 api_router.include_router(brands.router, tags=["brands"])

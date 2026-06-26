@@ -70,11 +70,13 @@ class ProductReview(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
+    order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id"), nullable=True, index=True)
     customer_name: Mapped[str] = mapped_column(String(255))
     customer_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     rating: Mapped[int] = mapped_column(Integer)
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     body: Mapped[str] = mapped_column(Text())
+    verified_purchase: Mapped[bool] = mapped_column(Boolean, default=False)
     status: Mapped[ProductReviewStatus] = mapped_column(
         Enum(
             ProductReviewStatus,

@@ -333,11 +333,13 @@ PRODUCT_REVIEWS = [
     {
         "id": 1,
         "product_id": 1,
+        "order_id": None,
         "customer_name": "Mariana R.",
         "customer_email": "mariana@example.com",
         "rating": 5,
         "title": "Textura y luminosidad reales",
         "body": "Lo uso por la noche y mi piel amanece mucho mas uniforme, suave y con mejor luminosidad.",
+        "verified_purchase": False,
         "status": "approved",
         "source": "customer",
         "created_at": datetime.now(timezone.utc),
@@ -346,11 +348,13 @@ PRODUCT_REVIEWS = [
     {
         "id": 2,
         "product_id": 1,
+        "order_id": None,
         "customer_name": "Fernanda C.",
         "customer_email": None,
         "rating": 4,
         "title": "Ideal para antiedad ligera",
         "body": "Me gusto porque se siente elegante, no pesado, y combina bien con mi crema nocturna.",
+        "verified_purchase": False,
         "status": "approved",
         "source": "imported",
         "created_at": datetime.now(timezone.utc),
@@ -359,11 +363,13 @@ PRODUCT_REVIEWS = [
     {
         "id": 3,
         "product_id": 2,
-        "customer_name": "Paola M.",
-        "customer_email": "paola@example.com",
+        "order_id": 1,
+        "customer_name": "Cliente Demo",
+        "customer_email": "cliente@skinhearten.com",
         "rating": 5,
         "title": "Limpieza suave",
         "body": "No me deja tirantez y me ha funcionado muy bien para una piel sensible y deshidratada.",
+        "verified_purchase": True,
         "status": "approved",
         "source": "customer",
         "created_at": datetime.now(timezone.utc),
@@ -372,11 +378,13 @@ PRODUCT_REVIEWS = [
     {
         "id": 4,
         "product_id": 4,
+        "order_id": None,
         "customer_name": "Andrea V.",
         "customer_email": None,
         "rating": 4,
         "title": "Acabado comodo",
         "body": "Se reaplica facil, no deja capa blanca y lo uso diario debajo del maquillaje.",
+        "verified_purchase": False,
         "status": "approved",
         "source": "admin",
         "created_at": datetime.now(timezone.utc),
@@ -385,11 +393,13 @@ PRODUCT_REVIEWS = [
     {
         "id": 5,
         "product_id": 3,
+        "order_id": None,
         "customer_name": "Lucia S.",
         "customer_email": "lucia@example.com",
         "rating": 5,
         "title": "Pendiente de moderacion",
         "body": "La textura me encanto y siento la piel mas comoda desde la primera semana de uso.",
+        "verified_purchase": False,
         "status": "pending",
         "source": "customer",
         "created_at": datetime.now(timezone.utc),
@@ -520,6 +530,41 @@ ORDERS = [
         "items": [
             {"product_id": 2, "product_name": "Gel Limpiador Barrera", "quantity": 1, "unit_price": 649.0}
         ],
+    },
+    {
+        "id": 2,
+        "order_number": "SH-1088",
+        "customer_id": 1,
+        "status": "paid",
+        "subtotal": 759.0,
+        "discount_total": 0.0,
+        "shipping_total": 149.0,
+        "grand_total": 908.0,
+        "payment_provider": "stripe",
+        "customer_email": "cliente@skinhearten.com",
+        "shipping_name": "Cliente Demo",
+        "shipping_phone": "+52 55 1234 5678",
+        "shipping_address": "Av. Reforma 123, Col. Juarez, Ciudad de Mexico, CDMX, 06600, Mexico",
+        "shipping_address_data": {
+            "line1": "Av. Reforma 123",
+            "line2": "Col. Juarez",
+            "city": "Ciudad de Mexico",
+            "state": "CDMX",
+            "postal_code": "06600",
+            "country": "Mexico",
+        },
+        "tracking_number": None,
+        "shipping_carrier": None,
+        "internal_notes": None,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "shipped_at": None,
+        "delivered_at": None,
+        "cancelled_at": None,
+        "refunded_at": None,
+        "items": [
+            {"product_id": 4, "product_name": "Protector Solar Seda FPS 50", "quantity": 1, "unit_price": 759.0}
+        ],
     }
 ]
 
@@ -531,6 +576,28 @@ PAYMENTS = [
         "provider_reference": "mer_demo_001",
         "status": "paid",
         "amount": 1129.0,
+        "raw_payload_json": {
+            "shipping_address": {
+                "line1": "Av. Reforma 123",
+                "line2": "Col. Juarez",
+                "city": "Ciudad de Mexico",
+                "state": "CDMX",
+                "postal_code": "06600",
+                "country": "Mexico",
+            }
+        },
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "paid_at": datetime.now(timezone.utc),
+        "failed_at": None,
+    },
+    {
+        "id": 2,
+        "order_id": 2,
+        "provider": "stripe",
+        "provider_reference": "cs_test_demo_002",
+        "status": "paid",
+        "amount": 908.0,
         "raw_payload_json": {
             "shipping_address": {
                 "line1": "Av. Reforma 123",
@@ -1537,6 +1604,7 @@ def list_product_reviews(
     rating: int | None = None,
     search: str | None = None,
     status: str | None = None,
+    verified_purchase: bool | None = None,
 ) -> list[dict]:
     normalized_search = search.strip().lower() if search else None
     reviews = [deepcopy(review) for review in PRODUCT_REVIEWS]
@@ -1546,6 +1614,8 @@ def list_product_reviews(
         if product_id is not None and review["product_id"] != product_id:
             continue
         if status and review.get("status") != status:
+            continue
+        if verified_purchase is not None and bool(review.get("verified_purchase", False)) != verified_purchase:
             continue
         if rating is not None and int(review.get("rating") or 0) != rating:
             continue
@@ -1582,6 +1652,8 @@ def create_product_review(payload: dict) -> dict:
         "id": next_id,
         "created_at": datetime.now(timezone.utc),
         "approved_at": payload.get("approved_at"),
+        "order_id": payload.get("order_id"),
+        "verified_purchase": bool(payload.get("verified_purchase", False)),
         **payload,
     }
     PRODUCT_REVIEWS.append(review)

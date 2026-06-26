@@ -8,12 +8,16 @@ export async function GET(request: Request) {
 
   const rawRating = searchParams.get("rating") ?? undefined;
   const rating = rawRating && rawRating !== "all" ? Number(rawRating) : undefined;
+  const rawVerifiedPurchase = searchParams.get("verified_purchase") ?? undefined;
+  const verifiedPurchase =
+    rawVerifiedPurchase === "true" ? true : rawVerifiedPurchase === "false" ? false : undefined;
 
   const filters: AdminProductReviewFilters = {
     product: searchParams.get("product") ?? undefined,
     rating: typeof rating === "number" && Number.isFinite(rating) ? rating : undefined,
     search: searchParams.get("search") ?? undefined,
     status: (searchParams.get("status") ?? undefined) as AdminProductReviewStatus | undefined,
+    verifiedPurchase,
   };
 
   const result = await listAdminReviews(filters);
