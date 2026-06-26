@@ -474,22 +474,22 @@ export function ProductsPage() {
 
   return (
     <>
-      <div className="space-y-6">
-        <section className="soft-panel rounded-[1.8rem] p-6">
+      <div className="space-y-5">
+        <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">Productos</p>
-              <h1 className="mt-2 font-serif text-4xl text-stone-900">Product Media Manager</h1>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-600">
+              <h1 className="mt-2 font-serif text-3xl text-stone-900 sm:text-[2.4rem]">Product Media Manager</h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-stone-600">
                 Administra imagenes reales de producto desde un solo panel. Puedes subir, reemplazar, marcar primaria, reordenar y eliminar sin tocar el storefront publico.
               </p>
             </div>
-            <div className="rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-600">
+            <div className="rounded-full border border-stone-200 bg-white px-3 py-2 text-xs text-stone-600">
               {isLoading ? "Cargando..." : `${products.length} productos`}
             </div>
           </div>
 
-          <label className="mt-6 flex items-center gap-3 rounded-full border border-stone-200 bg-white px-5 py-3">
+          <label className="mt-5 flex items-center gap-3 rounded-full border border-stone-200 bg-white px-4 py-2.5">
             <SearchIcon className="h-4 w-4 text-stone-500" />
             <input
               className="w-full border-none bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
@@ -502,39 +502,39 @@ export function ProductsPage() {
           </label>
         </section>
 
-        <section className="soft-panel rounded-[1.8rem] p-4 sm:p-6">
+        <section className="soft-panel rounded-[1.5rem] p-3 sm:p-4">
           {isLoading ? (
             <EmptyBlock message="Cargando productos reales desde la API..." />
           ) : filteredProducts.length === 0 ? (
             <EmptyBlock message={getPageMessage(errorReason)} />
           ) : (
-            <div className="overflow-hidden rounded-[1.6rem] border border-stone-200 bg-white">
+            <div className="overflow-hidden rounded-[1.3rem] border border-stone-200 bg-white">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-stone-200 text-left">
                   <thead className="bg-[#fff8f3] text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
                     <tr>
-                      <th className="px-4 py-4">Producto</th>
-                      <th className="px-4 py-4">SKU</th>
-                      <th className="px-4 py-4">Categoria</th>
-                      <th className="px-4 py-4">Precio</th>
-                      <th className="px-4 py-4">Stock</th>
-                      <th className="px-4 py-4">Imagenes</th>
-                      <th className="px-4 py-4 text-right">Gestion</th>
+                      <th className="px-4 py-3">Producto</th>
+                      <th className="px-4 py-3">SKU</th>
+                      <th className="px-4 py-3">Categoria</th>
+                      <th className="px-4 py-3">Precio</th>
+                      <th className="px-4 py-3">Stock</th>
+                      <th className="px-4 py-3">Imagenes</th>
+                      <th className="px-4 py-3 text-right">Gestion</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100 text-sm text-stone-700">
                     {filteredProducts.map((product) => (
                       <tr className="align-top" key={product.id}>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3">
                           <p className="font-semibold text-stone-900">{product.name}</p>
                           <p className="mt-1 text-xs text-stone-500">{product.brand}</p>
                         </td>
-                        <td className="px-4 py-4 text-stone-600">{product.sku}</td>
-                        <td className="px-4 py-4 text-stone-600">{product.category}</td>
-                        <td className="px-4 py-4 font-medium text-stone-900">{formatCurrency(product.price)}</td>
-                        <td className="px-4 py-4 text-stone-600">{product.stock}</td>
-                        <td className="px-4 py-4 text-stone-600">{product.imageObjects.length}</td>
-                        <td className="px-4 py-4 text-right">
+                        <td className="px-4 py-3 text-stone-600">{product.sku}</td>
+                        <td className="px-4 py-3 text-stone-600">{product.category}</td>
+                        <td className="px-4 py-3 font-medium text-stone-900">{formatCurrency(product.price)}</td>
+                        <td className="px-4 py-3 text-stone-600">{product.stock}</td>
+                        <td className="px-4 py-3 text-stone-600">{product.imageObjects.length}</td>
+                        <td className="px-4 py-3 text-right">
                           <button
                             className="inline-flex items-center justify-center rounded-full border border-stone-300 px-4 py-2 text-xs font-semibold text-stone-800 transition hover:border-stone-500"
                             onClick={() => {
@@ -569,11 +569,11 @@ export function ProductsPage() {
               }}
               type="button"
             />
-            <aside className="flex h-full w-full max-w-4xl flex-col overflow-y-auto border-l border-stone-200 bg-[#fcfaf8] px-5 py-5 shadow-2xl sm:px-6">
+            <aside className="flex h-full w-full max-w-[1180px] flex-col overflow-y-auto border-l border-stone-200 bg-[#fcfaf8] px-4 py-4 shadow-2xl sm:px-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Producto</p>
-                  <h2 className="mt-2 font-serif text-3xl text-stone-900">
+                  <h2 className="mt-2 font-serif text-2xl text-stone-900 sm:text-[2rem]">
                     {selectedProduct?.name ?? `Producto #${selectedProductId}`}
                   </h2>
                   {selectedProduct ? (
@@ -601,9 +601,9 @@ export function ProductsPage() {
               {isDetailLoading && !selectedProduct ? (
                 <EmptyBlock className="mt-6" message="Cargando detalle del producto..." />
               ) : selectedProduct ? (
-                <div className="mt-6 space-y-6 pb-10">
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
-                    <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+                <div className="mt-5 space-y-5 pb-8">
+                  <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
+                    <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
                       <div>
                         {selectedProduct.imageObjects[0] ? (
                           <MediaPreview
@@ -622,12 +622,12 @@ export function ProductsPage() {
                         )}
                       </div>
 
-                      <div className="rounded-[1.4rem] bg-[#fff8f3] p-5">
+                      <div className="rounded-[1.3rem] bg-[#fff8f3] p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
                           Imagenes del producto
                         </p>
-                        <h3 className="mt-2 font-serif text-2xl text-stone-900">Subir nueva imagen</h3>
-                        <p className="mt-3 text-sm leading-7 text-stone-600">
+                        <h3 className="mt-2 font-serif text-[1.6rem] text-stone-900">Subir nueva imagen</h3>
+                        <p className="mt-3 text-sm leading-6 text-stone-600">
                           Archivos permitidos: JPEG, PNG y WebP. Maximo 5 MB por imagen.
                         </p>
 
@@ -656,7 +656,7 @@ export function ProductsPage() {
                           type="file"
                         />
 
-                        <div className="mt-5 space-y-4">
+                        <div className="mt-4 space-y-4">
                           <button
                             className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-500"
                             onClick={() => {
@@ -668,7 +668,7 @@ export function ProductsPage() {
                           </button>
 
                           {uploadPreviewUrl ? (
-                            <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+                            <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
                               <img
                                 alt="Preview de carga"
                                 className="h-full min-h-48 w-full rounded-[1.4rem] object-cover"
@@ -721,11 +721,11 @@ export function ProductsPage() {
                     </div>
                   </section>
 
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                  <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Galeria</p>
-                        <h3 className="mt-2 font-serif text-2xl text-stone-900">Orden y reemplazo</h3>
+                        <h3 className="mt-2 font-serif text-[1.6rem] text-stone-900">Orden y reemplazo</h3>
                       </div>
                       <p className="text-sm text-stone-500">
                         {selectedProduct.imageObjects.length} imagenes
@@ -735,13 +735,13 @@ export function ProductsPage() {
                     {selectedProduct.imageObjects.length === 0 ? (
                       <EmptyBlock className="mt-5" message="Aun no hay imagenes cargadas para este producto." />
                     ) : (
-                      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                      <div className="mt-4 grid gap-4 xl:grid-cols-2">
                         {selectedProduct.imageObjects
                           .slice()
                           .sort((left, right) => left.sortOrder - right.sortOrder)
                           .map((image, index, array) => (
-                            <article className="rounded-[1.5rem] border border-stone-200 bg-[#fffaf7] p-4" key={image.id}>
-                              <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+                            <article className="rounded-[1.3rem] border border-stone-200 bg-[#fffaf7] p-4" key={image.id}>
+                              <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
                                 <MediaPreview altText={image.altText} url={image.url} />
 
                                 <div className="space-y-4">
@@ -877,9 +877,9 @@ function EmptyBlock({
   message: string;
 }) {
   return (
-    <div className={`${className} rounded-[1.5rem] border border-dashed border-stone-300 bg-white px-5 py-10 text-center`}>
-      <p className="font-serif text-2xl text-stone-900">Sin resultados por ahora</p>
-      <p className="mt-3 text-sm leading-7 text-stone-600">{message}</p>
+    <div className={`${className} rounded-[1.2rem] border border-dashed border-stone-300 bg-white px-4 py-6 text-center`}>
+      <p className="font-serif text-[1.6rem] text-stone-900">Sin resultados por ahora</p>
+      <p className="mt-2 text-sm leading-6 text-stone-600">{message}</p>
     </div>
   );
 }
@@ -893,7 +893,7 @@ function NoticeBanner({
 }) {
   return (
     <div
-      className={`${className} rounded-[1.4rem] border px-4 py-4 text-sm leading-7 ${
+      className={`${className} rounded-[1.2rem] border px-4 py-3 text-sm leading-6 ${
         notice.kind === "success"
           ? "border-[#d8e3cf] bg-[#f5faf1] text-[#476638]"
           : "border-[#ead0c7] bg-[#fff6f2] text-[#8a4d3b]"
@@ -903,3 +903,4 @@ function NoticeBanner({
     </div>
   );
 }
+

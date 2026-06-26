@@ -727,25 +727,25 @@ export function CrmPage() {
 
   return (
     <>
-      <div className="space-y-6">
-        <section className="soft-panel rounded-[1.8rem] p-6">
+      <div className="space-y-5">
+        <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">CRM</p>
-              <h1 className="mt-2 font-serif text-4xl text-stone-900">Operacion comercial escalable</h1>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-600">
+              <h1 className="mt-2 font-serif text-3xl text-stone-900 sm:text-[2.4rem]">Operacion comercial escalable</h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-stone-600">
                 Tabla compacta, filtros server-side y drawer por tabs para seguir 10,000+ contactos sin saturar la vista.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               <MetricPill label="Total" value={String(total)} />
               <MetricPill label="Mostrando" value={`${rangeStart}-${rangeEnd}`} />
               <MetricPill label="Pagina" value={`${page}/${Math.max(1, totalPages)}`} />
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_repeat(6,minmax(0,1fr))]">
-            <label className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-5 py-3">
+          <div className="mt-5 grid gap-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(6,minmax(0,1fr))]">
+            <label className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-4 py-2.5">
               <SearchIcon className="h-4 w-4 text-stone-500" />
               <input
                 className="w-full border-none bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
@@ -845,21 +845,21 @@ export function CrmPage() {
           </div>
         </section>
 
-        <section className="soft-panel rounded-[1.8rem] p-4 sm:p-6">
-          <div className="overflow-hidden rounded-[1.5rem] border border-stone-200 bg-white">
+        <section className="soft-panel rounded-[1.5rem] p-3 sm:p-4">
+          <div className="overflow-hidden rounded-[1.3rem] border border-stone-200 bg-white">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-stone-200 text-left">
                 <thead className="bg-[#fff8f3] text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500">
                   <tr>
-                    <th className="px-4 py-4">Contacto</th>
-                    <th className="px-4 py-4">Canal</th>
-                    <th className="px-4 py-4">Lifecycle</th>
-                    <th className="px-4 py-4">Piel</th>
-                    <th className="px-4 py-4">Objetivo</th>
-                    <th className="px-4 py-4">Marketing</th>
-                    <th className="px-4 py-4">Ultima actividad</th>
-                    <th className="px-4 py-4">Proxima tarea</th>
-                    <th className="px-4 py-4 text-right">Acciones</th>
+                    <th className="px-4 py-3">Contacto</th>
+                    <th className="px-4 py-3">Canal</th>
+                    <th className="px-4 py-3">Lifecycle</th>
+                    <th className="px-4 py-3">Piel</th>
+                    <th className="px-4 py-3">Objetivo</th>
+                    <th className="px-4 py-3">Marketing</th>
+                    <th className="px-4 py-3">Ultima actividad</th>
+                    <th className="px-4 py-3">Proxima tarea</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 text-sm text-stone-700">
@@ -874,7 +874,7 @@ export function CrmPage() {
                   ) : (
                     contacts.map((contact) => (
                       <tr className="align-top transition hover:bg-[#fffdfb]" key={contact.id}>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3">
                           <button
                             className="text-left"
                             onClick={() => {
@@ -889,25 +889,25 @@ export function CrmPage() {
                             </p>
                           </button>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3">
                           <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getChannelBadgeClasses(contact.preferredChannel)}`}>
                             {contact.preferredChannel ? getCrmReminderChannelLabel(contact.preferredChannel) : "Sin canal"}
                           </span>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3">
                           <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getLifecycleBadgeClasses(contact.lifecycleStatus)}`}>
                             {getCrmLifecycleStatusLabel(contact.lifecycleStatus)}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-sm text-stone-600">{getCrmSkinTypeLabel(contact.skinType)}</td>
-                        <td className="px-4 py-4 text-sm text-stone-600">{getCrmMainGoalLabel(contact.mainGoal)}</td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3 text-sm text-stone-600">{getCrmSkinTypeLabel(contact.skinType)}</td>
+                        <td className="px-4 py-3 text-sm text-stone-600">{getCrmMainGoalLabel(contact.mainGoal)}</td>
+                        <td className="px-4 py-3">
                           <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getMarketingBadgeClasses(contact.acceptedMarketing)}`}>
                             {contact.acceptedMarketing ? "Aceptado" : "No"}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-sm text-stone-600">{formatDateTime(contact.lastSeenAt)}</td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3 text-sm text-stone-600">{formatDateTime(contact.lastSeenAt)}</td>
+                        <td className="px-4 py-3">
                           {contact.nextTask ? (
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-stone-900">{contact.nextTask.title}</p>
@@ -920,7 +920,7 @@ export function CrmPage() {
                             <span className="text-xs text-stone-500">Sin tarea pendiente</span>
                           )}
                         </td>
-                        <td className="px-4 py-4 text-right">
+                        <td className="px-4 py-3 text-right">
                           <button
                             className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-800 transition hover:border-stone-500"
                             onClick={() => {
@@ -966,11 +966,11 @@ export function CrmPage() {
               }}
               type="button"
             />
-            <aside className="flex h-full w-full max-w-4xl flex-col overflow-y-auto border-l border-stone-200 bg-[#fcfaf8] px-5 py-5 shadow-2xl sm:px-6">
+            <aside className="flex h-full w-full max-w-[1120px] flex-col overflow-y-auto border-l border-stone-200 bg-[#fcfaf8] px-4 py-4 shadow-2xl sm:px-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Detalle CRM</p>
-                  <h2 className="mt-2 font-serif text-3xl text-stone-900">
+                  <h2 className="mt-2 font-serif text-2xl text-stone-900 sm:text-[2rem]">
                     {activeContact ? getContactDisplayName(activeContact) : `Contacto #${selectedContactId}`}
                   </h2>
                   {activeContact ? (
@@ -994,7 +994,7 @@ export function CrmPage() {
 
               {drawerNotice ? <NoticeBanner className="mt-5" notice={drawerNotice} /> : null}
 
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <DrawerTabButton
                   active={activeTab === "summary"}
                   count={null}
@@ -1042,10 +1042,10 @@ export function CrmPage() {
               ) : detailError && !activeContact ? (
                 <EmptyBlock className="mt-6" message="No pudimos cargar el detalle del contacto." />
               ) : activeContact ? (
-                <div className="mt-6 space-y-5 pb-10">
+                <div className="mt-5 space-y-4 pb-8">
                   {activeTab === "summary" ? (
                     <>
-                      <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                      <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                           <MetaPill label="Lifecycle" value={getCrmLifecycleStatusLabel(activeContact.lifecycleStatus)} />
                           <MetaPill label="Origen" value={getCrmSourceLabel(activeContact.source)} />
@@ -1084,7 +1084,7 @@ export function CrmPage() {
                         </div>
                       </section>
 
-                      <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                      <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                           <div className="space-y-3">
                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Perfil editable</p>
@@ -1131,7 +1131,7 @@ export function CrmPage() {
                         </div>
                       </section>
 
-                      <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                      <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Resumen comercial</p>
                         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                           <MetaPill label="Pedidos" value={String(activeContact.purchaseSummary.orderCount)} />
@@ -1154,11 +1154,11 @@ export function CrmPage() {
                   ) : null}
 
                   {activeTab === "events" ? (
-                    <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                    <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Eventos</p>
-                          <h3 className="mt-2 font-serif text-2xl text-stone-900">Linea de tiempo reciente</h3>
+                          <h3 className="mt-2 font-serif text-[1.6rem] text-stone-900">Linea de tiempo reciente</h3>
                         </div>
                       </div>
 
@@ -1186,10 +1186,10 @@ export function CrmPage() {
                   ) : null}
 
                   {activeTab === "notes" ? (
-                    <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                    <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Notas</p>
-                        <h3 className="mt-2 font-serif text-2xl text-stone-900">Seguimiento interno</h3>
+                        <h3 className="mt-2 font-serif text-[1.6rem] text-stone-900">Seguimiento interno</h3>
                       </div>
 
                       <div className="mt-5 space-y-3">
@@ -1233,10 +1233,10 @@ export function CrmPage() {
                   ) : null}
 
                   {activeTab === "tasks" ? (
-                    <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                    <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Tareas</p>
-                        <h3 className="mt-2 font-serif text-2xl text-stone-900">Pendientes comerciales</h3>
+                        <h3 className="mt-2 font-serif text-[1.6rem] text-stone-900">Pendientes comerciales</h3>
                       </div>
 
                       <div className="mt-5 space-y-3">
@@ -1336,10 +1336,10 @@ export function CrmPage() {
                   ) : null}
 
                   {activeTab === "reminders" ? (
-                    <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                    <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Recordatorios</p>
-                        <h3 className="mt-2 font-serif text-2xl text-stone-900">Seguimiento multicanal</h3>
+                        <h3 className="mt-2 font-serif text-[1.6rem] text-stone-900">Seguimiento multicanal</h3>
                       </div>
 
                       <div className="mt-5 space-y-3">
@@ -1473,7 +1473,7 @@ function DrawerTabButton({
 }) {
   return (
     <button
-      className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition ${
         active
           ? "border-stone-900 bg-stone-900 text-white"
           : "border-stone-200 bg-white text-stone-700 hover:border-stone-400"
@@ -1506,7 +1506,7 @@ function FilterSelect({
     <label className="space-y-2">
       <span className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">{label}</span>
       <select
-        className="w-full rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+        className="w-full rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-500"
         onChange={(event) => {
           onChange(event.target.value);
         }}
@@ -1524,7 +1524,7 @@ function FilterSelect({
 
 function MetricPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700">
+    <div className="rounded-full border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700">
       <span className="font-semibold text-stone-900">{value}</span> {label}
     </div>
   );
@@ -1602,7 +1602,7 @@ function EmptyBlock({
   message: string;
 }) {
   return (
-    <div className={`${className} rounded-[1.2rem] border border-dashed border-stone-300 bg-white px-4 py-5 text-sm leading-7 text-stone-500`}>
+    <div className={`${className} rounded-[1.2rem] border border-dashed border-stone-300 bg-white px-4 py-5 text-sm leading-6 text-stone-500`}>
       {message}
     </div>
   );

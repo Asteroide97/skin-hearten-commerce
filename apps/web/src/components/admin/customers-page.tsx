@@ -251,24 +251,24 @@ export function CustomersPage() {
 
   return (
     <>
-      <div className="space-y-6">
-        <section className="soft-panel rounded-[1.8rem] p-6">
+      <div className="space-y-5">
+        <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">Clientes</p>
-              <h1 className="mt-2 font-serif text-4xl text-stone-900">Base comercial operativa</h1>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-600">
+              <h1 className="mt-2 font-serif text-3xl text-stone-900 sm:text-[2.4rem]">Base comercial operativa</h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-stone-600">
                 Vista compacta, filtrable y paginada para operar miles de clientas sin depender de cards grandes ni cargas masivas.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               <MetricPill label="Total" value={String(total)} />
               <MetricPill label="Pagina" value={`${page}/${Math.max(1, totalPages)}`} />
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_repeat(5,minmax(0,1fr))]">
-            <label className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-5 py-3">
+          <div className="mt-5 grid gap-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(5,minmax(0,1fr))]">
+            <label className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-4 py-2.5">
               <SearchIcon className="h-4 w-4 text-stone-500" />
               <input
                 className="w-full border-none bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
@@ -353,21 +353,21 @@ export function CustomersPage() {
           </div>
         </section>
 
-        <section className="soft-panel rounded-[1.8rem] p-4 sm:p-6">
-          <div className="overflow-hidden rounded-[1.5rem] border border-stone-200 bg-white">
+        <section className="soft-panel rounded-[1.5rem] p-3 sm:p-4">
+          <div className="overflow-hidden rounded-[1.3rem] border border-stone-200 bg-white">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-stone-200 text-left">
                 <thead className="bg-[#fff8f3] text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500">
                   <tr>
-                    <th className="px-4 py-4">Cliente</th>
-                    <th className="px-4 py-4">Email</th>
-                    <th className="px-4 py-4">WhatsApp</th>
-                    <th className="px-4 py-4">Pedidos</th>
-                    <th className="px-4 py-4">Total gastado</th>
-                    <th className="px-4 py-4">Ultima compra</th>
-                    <th className="px-4 py-4">Marketing</th>
-                    <th className="px-4 py-4">Estado</th>
-                    <th className="px-4 py-4 text-right">Acciones</th>
+                    <th className="px-4 py-3">Cliente</th>
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">WhatsApp</th>
+                    <th className="px-4 py-3">Pedidos</th>
+                    <th className="px-4 py-3">Total gastado</th>
+                    <th className="px-4 py-3">Ultima compra</th>
+                    <th className="px-4 py-3">Marketing</th>
+                    <th className="px-4 py-3">Estado</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 text-sm text-stone-700">
@@ -382,7 +382,7 @@ export function CustomersPage() {
                   ) : (
                     customers.map((customer) => (
                       <tr className="align-top transition hover:bg-[#fffdfb]" key={customer.id}>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3">
                           <button
                             className="text-left"
                             onClick={() => {
@@ -394,26 +394,26 @@ export function CustomersPage() {
                             <p className="mt-1 text-xs text-stone-500">{customer.source ? customer.source.replaceAll("_", " ") : "Sin origen CRM"}</p>
                           </button>
                         </td>
-                        <td className="px-4 py-4 text-sm text-stone-600">{customer.email ?? "Sin email"}</td>
-                        <td className="px-4 py-4 text-sm text-stone-600">{customer.whatsapp ?? "Sin WhatsApp"}</td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3 text-sm text-stone-600">{customer.email ?? "Sin email"}</td>
+                        <td className="px-4 py-3 text-sm text-stone-600">{customer.whatsapp ?? "Sin WhatsApp"}</td>
+                        <td className="px-4 py-3">
                           <p className="font-medium text-stone-900">{customer.ordersCount}</p>
                         </td>
-                        <td className="px-4 py-4 font-medium text-stone-900">{formatCurrency(customer.totalSpent)}</td>
-                        <td className="px-4 py-4 text-sm text-stone-600">
+                        <td className="px-4 py-3 font-medium text-stone-900">{formatCurrency(customer.totalSpent)}</td>
+                        <td className="px-4 py-3 text-sm text-stone-600">
                           {customer.lastPurchaseAt ? formatDateTime(customer.lastPurchaseAt) : "Sin compra"}
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3">
                           <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getMarketingBadgeClasses(customer.acceptedMarketing)}`}>
                             {customer.acceptedMarketing === true ? "Aceptado" : customer.acceptedMarketing === false ? "No" : "Sin dato"}
                           </span>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3">
                           <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getLifecycleBadgeClasses(customer.lifecycleStatus)}`}>
                             {getCustomerLifecycleLabel(customer.lifecycleStatus)}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-right">
+                        <td className="px-4 py-3 text-right">
                           <button
                             className="rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-800 transition hover:border-stone-500"
                             onClick={() => {
@@ -459,11 +459,11 @@ export function CustomersPage() {
               }}
               type="button"
             />
-            <aside className="flex h-full w-full max-w-3xl flex-col overflow-y-auto border-l border-stone-200 bg-[#fcfaf8] px-5 py-5 shadow-2xl sm:px-6">
+            <aside className="flex h-full w-full max-w-[980px] flex-col overflow-y-auto border-l border-stone-200 bg-[#fcfaf8] px-4 py-4 shadow-2xl sm:px-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Detalle cliente</p>
-                  <h2 className="mt-2 font-serif text-3xl text-stone-900">
+                  <h2 className="mt-2 font-serif text-2xl text-stone-900 sm:text-[2rem]">
                     {activeCustomer?.name ?? `Cliente #${selectedCustomerId}`}
                   </h2>
                   {activeCustomer ? (
@@ -489,8 +489,8 @@ export function CustomersPage() {
               {isDetailLoading && !activeCustomer ? (
                 <EmptyBlock className="mt-6" message="Cargando detalle de la clienta..." />
               ) : activeCustomer ? (
-                <div className="mt-6 space-y-5 pb-10">
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                <div className="mt-5 space-y-4 pb-8">
+                  <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                       <MetaPill label="Pedidos" value={String(activeCustomer.ordersCount)} />
                       <MetaPill label="Total gastado" value={formatCurrency(activeCustomer.totalSpent)} />
@@ -501,7 +501,7 @@ export function CustomersPage() {
                       <MetaPill label="Marketing" value={activeCustomer.acceptedMarketing === true ? "Aceptado" : activeCustomer.acceptedMarketing === false ? "No aceptado" : "Sin dato"} />
                     </div>
 
-                    <div className="mt-5 flex flex-wrap gap-3">
+                    <div className="mt-4 flex flex-wrap gap-3">
                       {activeCustomer.whatsapp ? (
                         <a
                           className="inline-flex items-center justify-center gap-2 rounded-full border border-[#cfe0df] bg-[#eef8f7] px-5 py-3 text-sm font-semibold text-[#2c6160] transition hover:border-[#98b8b6]"
@@ -532,7 +532,7 @@ export function CustomersPage() {
                       ) : null}
                     </div>
 
-                    <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
                       <MetaPill label="Estado CRM" value={getCustomerLifecycleLabel(activeCustomer.lifecycleStatus)} />
                       <MetaPill label="Objetivo" value={getCrmMainGoalLabel(activeCustomer.mainGoal)} />
                       <MetaPill label="Tipo de piel" value={getCrmSkinTypeLabel(activeCustomer.skinType)} />
@@ -540,7 +540,7 @@ export function CustomersPage() {
                     </div>
 
                     {activeCustomer.tags.length > 0 ? (
-                      <div className="mt-5 flex flex-wrap gap-2">
+                      <div className="mt-4 flex flex-wrap gap-2">
                         {activeCustomer.tags.map((tag) => (
                           <span
                             className="rounded-full border border-stone-200 bg-[#fff8f3] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-600"
@@ -553,11 +553,11 @@ export function CustomersPage() {
                     ) : null}
                   </section>
 
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                  <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Direcciones</p>
-                        <h3 className="mt-2 font-serif text-2xl text-stone-900">Datos de entrega</h3>
+                        <h3 className="mt-2 font-serif text-[1.6rem] text-stone-900">Datos de entrega</h3>
                       </div>
                     </div>
 
@@ -584,7 +584,7 @@ export function CustomersPage() {
                     </div>
                   </section>
 
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                  <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Pedidos recientes</p>
                     <div className="mt-4 space-y-3">
                       {activeCustomer.recentOrders.length === 0 ? (
@@ -615,7 +615,7 @@ export function CustomersPage() {
                     </div>
                   </section>
 
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                  <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Notas y seguimiento</p>
                     <div className="mt-4 space-y-3">
                       {activeCustomer.notes.length === 0 ? (
@@ -655,7 +655,7 @@ function FilterSelect({
     <label className="space-y-2">
       <span className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">{label}</span>
       <select
-        className="w-full rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+        className="w-full rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-500"
         onChange={(event) => {
           onChange(event.target.value);
         }}
@@ -673,7 +673,7 @@ function FilterSelect({
 
 function MetricPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700">
+    <div className="rounded-full border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700">
       <span className="font-semibold text-stone-900">{value}</span> {label}
     </div>
   );

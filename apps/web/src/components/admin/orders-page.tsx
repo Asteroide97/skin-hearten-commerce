@@ -349,18 +349,18 @@ export function OrdersPage() {
 
   return (
     <>
-      <div className="space-y-6">
-        <section className="soft-panel rounded-[2rem] p-6">
+      <div className="space-y-5">
+        <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">Pedidos</p>
-              <h1 className="mt-2 font-serif text-4xl text-stone-900">Operacion de ordenes</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-stone-600">
+              <h1 className="mt-2 font-serif text-3xl text-stone-900 sm:text-[2.4rem]">Operacion de ordenes</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600">
                 Consulta ordenes reales creadas desde checkout, revisa el estado de pago y gestiona preparacion, envio y seguimiento comercial desde un solo lugar.
               </p>
             </div>
             <button
-              className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-500"
+              className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-800 transition hover:border-stone-500"
               onClick={() => {
                 setSearchValue("");
                 setOrderStatusFilter("all");
@@ -377,8 +377,8 @@ export function OrdersPage() {
 
           {pageNotice ? <NoticeBanner className="mt-5" notice={pageNotice} /> : null}
 
-          <div className="mt-6 grid gap-3 xl:grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(0,1fr))]">
-            <label className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-5 py-3">
+          <div className="mt-5 grid gap-2 xl:grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(0,1fr))]">
+            <label className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-4 py-2.5">
               <SearchIcon className="h-4 w-4 text-stone-500" />
               <input
                 className="w-full border-none bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
@@ -435,18 +435,18 @@ export function OrdersPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <KpiCard label="Ordenes hoy" value={String(kpis.ordersToday)} />
           <KpiCard label="Pendientes de pago" value={String(kpis.pendingPayment)} />
           <KpiCard label="Pagadas" value={String(kpis.paid)} />
           <KpiCard label="Por preparar" value={String(kpis.preparing)} />
         </section>
 
-        <section className="soft-panel rounded-[2rem] p-6">
+        <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Listado</p>
-              <h2 className="mt-2 font-serif text-3xl text-stone-900">Pedidos recientes</h2>
+              <h2 className="mt-2 font-serif text-2xl text-stone-900 sm:text-[2rem]">Pedidos recientes</h2>
             </div>
             <p className="text-sm text-stone-500">
               {isLoading ? "Cargando..." : `${orders.length} ${orders.length === 1 ? "pedido" : "pedidos"}`}
@@ -454,62 +454,62 @@ export function OrdersPage() {
           </div>
 
           {isLoading ? (
-            <div className="mt-6 rounded-[1.6rem] border border-dashed border-stone-300 bg-white px-5 py-10 text-sm text-stone-500">
+            <div className="mt-5 rounded-[1.2rem] border border-dashed border-stone-300 bg-white px-4 py-6 text-sm text-stone-500">
               Cargando ordenes reales desde la API...
             </div>
           ) : orders.length === 0 ? (
             <EmptyBlock className="mt-6" message={getPageMessage(errorReason, hasFilters)} />
           ) : (
-            <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-stone-200 bg-white">
-              <div className="overflow-x-auto">
+            <div className="mt-5 overflow-hidden rounded-[1.3rem] border border-stone-200 bg-white">
+              <div className="max-h-[62vh] overflow-auto">
                 <table className="min-w-full divide-y divide-stone-200">
                   <thead className="bg-[#fffaf7]">
                     <tr className="text-left text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
-                      <th className="px-5 py-4">Orden</th>
-                      <th className="px-5 py-4">Cliente</th>
-                      <th className="px-5 py-4">Pago</th>
-                      <th className="px-5 py-4">Proveedor</th>
-                      <th className="px-5 py-4">Estado</th>
-                      <th className="px-5 py-4">Total</th>
-                      <th className="px-5 py-4">Fecha</th>
-                      <th className="px-5 py-4 text-right">Detalle</th>
+                      <th className="px-4 py-3">Orden</th>
+                      <th className="px-4 py-3">Cliente</th>
+                      <th className="px-4 py-3">Pago</th>
+                      <th className="px-4 py-3">Proveedor</th>
+                      <th className="px-4 py-3">Estado</th>
+                      <th className="px-4 py-3">Total</th>
+                      <th className="px-4 py-3">Fecha</th>
+                      <th className="px-4 py-3 text-right">Detalle</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100">
                     {orders.map((order) => (
                       <tr className="align-top text-sm text-stone-700" key={order.id}>
-                        <td className="px-5 py-4">
+                        <td className="px-4 py-3">
                           <p className="font-semibold text-stone-900">{order.orderNumber}</p>
                           <p className="mt-1 text-xs text-stone-500">#{order.id}</p>
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-4 py-3">
                           <p className="font-medium text-stone-900">{order.customerName}</p>
                           <p className="mt-1 text-xs text-stone-500">{order.customerEmail ?? "Sin email"}</p>
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-4 py-3">
                           <span
                             className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getPaymentStatusBadgeClasses(order.paymentStatus)}`}
                           >
                             {getAdminPaymentStatusLabel(order.paymentStatus)}
                           </span>
                         </td>
-                        <td className="px-5 py-4 text-sm text-stone-600">
+                        <td className="px-4 py-3 text-sm text-stone-600">
                           {getAdminPaymentProviderLabel(order.paymentProvider)}
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-4 py-3">
                           <span
                             className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getOrderStatusBadgeClasses(order.status)}`}
                           >
                             {getAdminOrderStatusLabel(order.status)}
                           </span>
                         </td>
-                        <td className="px-5 py-4 font-semibold text-stone-900">
+                        <td className="px-4 py-3 font-semibold text-stone-900">
                           {formatCurrency(order.total)}
                         </td>
-                        <td className="px-5 py-4 text-sm text-stone-600">
+                        <td className="px-4 py-3 text-sm text-stone-600">
                           {formatDateTime(order.createdAt)}
                         </td>
-                        <td className="px-5 py-4 text-right">
+                        <td className="px-4 py-3 text-right">
                           <button
                             className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-800 transition hover:border-stone-500"
                             onClick={() => {
@@ -542,11 +542,11 @@ export function OrdersPage() {
               }}
               type="button"
             />
-            <aside className="flex h-full w-full max-w-3xl flex-col overflow-y-auto border-l border-stone-200 bg-[#fcfaf8] px-5 py-5 shadow-2xl sm:px-6">
+            <aside className="flex h-full w-full max-w-[980px] flex-col overflow-y-auto border-l border-stone-200 bg-[#fcfaf8] px-4 py-4 shadow-2xl sm:px-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Detalle pedido</p>
-                  <h2 className="mt-2 font-serif text-3xl text-stone-900">
+                  <h2 className="mt-2 font-serif text-2xl text-stone-900 sm:text-[2rem]">
                     {activeOrder?.orderNumber ?? `Pedido #${selectedOrderId}`}
                   </h2>
                 </div>
@@ -572,8 +572,8 @@ export function OrdersPage() {
                   message="No pudimos cargar el detalle del pedido. Revisa que la API local este disponible."
                 />
               ) : activeOrder ? (
-                <div className="mt-6 space-y-5 pb-10">
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                <div className="mt-5 space-y-4 pb-8">
+                  <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                       <MetaPill label="Cliente" value={activeOrder.customer.name} />
                       <MetaPill label="Pago" value={getAdminPaymentStatusLabel(activeOrder.paymentStatus)} />
@@ -581,7 +581,7 @@ export function OrdersPage() {
                       <MetaPill label="Total" value={formatCurrency(activeOrder.total)} />
                     </div>
 
-                    <div className="mt-5 flex flex-wrap gap-3">
+                    <div className="mt-4 flex flex-wrap gap-3">
                       {activeOrder.customer.phone ? (
                         <a
                           className="inline-flex items-center justify-center gap-2 rounded-full border border-[#cfe0df] bg-[#eef8f7] px-5 py-3 text-sm font-semibold text-[#2c6160] transition hover:border-[#98b8b6]"
@@ -609,11 +609,11 @@ export function OrdersPage() {
                     </div>
                   </section>
 
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                  <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Gestion</p>
-                    <h3 className="mt-2 font-serif text-2xl text-stone-900">Estado y seguimiento</h3>
+                    <h3 className="mt-2 font-serif text-[1.6rem] text-stone-900">Estado y seguimiento</h3>
 
-                    <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                    <div className="mt-4 grid gap-4 lg:grid-cols-2">
                       <label className="space-y-2">
                         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
                           Estado de orden
@@ -722,7 +722,7 @@ export function OrdersPage() {
                     </div>
                   </section>
 
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                  <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Cliente</p>
                     <div className="mt-4 grid gap-4 md:grid-cols-2">
                       <MetaPill label="Email" value={activeOrder.customer.email ?? "Sin email"} />
@@ -735,7 +735,7 @@ export function OrdersPage() {
                     </div>
                   </section>
 
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                  <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Productos</p>
                     <div className="mt-4 space-y-3">
                       {activeOrder.items.map((item) => (
@@ -760,7 +760,7 @@ export function OrdersPage() {
                     </div>
                   </section>
 
-                  <section className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
+                  <section className="rounded-[1.4rem] border border-stone-200 bg-white p-4 shadow-soft">
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Pago y trazabilidad</p>
                     <div className="mt-4 grid gap-4 md:grid-cols-2">
                       <MetaPill label="Referencia proveedor" value={activeOrder.rawProviderReference ?? "Sin referencia"} />
@@ -800,9 +800,9 @@ export function OrdersPage() {
 
 function KpiCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="soft-panel rounded-[1.8rem] p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">{label}</p>
-      <p className="mt-3 font-serif text-4xl text-stone-900">{value}</p>
+    <div className="soft-panel rounded-[1.3rem] p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">{label}</p>
+      <p className="mt-2 font-serif text-[2rem] leading-none text-stone-900">{value}</p>
     </div>
   );
 }
@@ -822,7 +822,7 @@ function FilterSelect({
     <label className="space-y-2">
       <span className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">{label}</span>
       <select
-        className="w-full rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+        className="w-full rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-500"
         onChange={(event) => {
           onChange(event.target.value);
         }}
@@ -854,7 +854,7 @@ function DateRangeInputs({
       <label className="space-y-2">
         <span className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Desde</span>
         <input
-          className="w-full rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+          className="w-full rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-500"
           onChange={(event) => {
             onDateFromChange(event.target.value);
           }}
@@ -865,7 +865,7 @@ function DateRangeInputs({
       <label className="space-y-2">
         <span className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Hasta</span>
         <input
-          className="w-full rounded-full border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+          className="w-full rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-500"
           onChange={(event) => {
             onDateToChange(event.target.value);
           }}
@@ -879,7 +879,7 @@ function DateRangeInputs({
 
 function MetaPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4">
+    <div className="rounded-[1.1rem] bg-[#fff8f3] px-4 py-3">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">{label}</p>
       <p className="mt-2 text-sm font-medium text-stone-900">{value}</p>
     </div>
@@ -894,7 +894,7 @@ function EmptyBlock({
   message: string;
 }) {
   return (
-    <div className={`${className} rounded-[1.6rem] border border-dashed border-stone-300 bg-white px-5 py-10 text-sm leading-7 text-stone-500`}>
+    <div className={`${className} rounded-[1.2rem] border border-dashed border-stone-300 bg-white px-4 py-6 text-sm leading-6 text-stone-500`}>
       {message}
     </div>
   );
@@ -919,3 +919,4 @@ function NoticeBanner({
     </div>
   );
 }
+
