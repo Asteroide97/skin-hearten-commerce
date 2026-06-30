@@ -349,18 +349,18 @@ export function OrdersPage() {
 
   return (
     <>
-      <div className="space-y-5">
-        <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
+      <div className="admin-workspace admin-orders space-y-5">
+        <section className="admin-panel px-4 py-5 sm:px-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">Pedidos</p>
+              <p className="section-label">Pedidos</p>
               <h1 className="mt-2 font-serif text-3xl text-stone-900 sm:text-[2.4rem]">Operacion de ordenes</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600">
                 Consulta ordenes reales creadas desde checkout, revisa el estado de pago y gestiona preparacion, envio y seguimiento comercial desde un solo lugar.
               </p>
             </div>
             <button
-              className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-800 transition hover:border-stone-500"
+              className="btn-secondary px-4 py-2.5"
               onClick={() => {
                 setSearchValue("");
                 setOrderStatusFilter("all");
@@ -378,7 +378,7 @@ export function OrdersPage() {
           {pageNotice ? <NoticeBanner className="mt-5" notice={pageNotice} /> : null}
 
           <div className="mt-5 grid gap-2 xl:grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(0,1fr))]">
-            <label className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-4 py-2.5">
+            <label className="flex items-center gap-3 rounded-[1rem] border border-stone-200 bg-white px-4 py-2.5">
               <SearchIcon className="h-4 w-4 text-stone-500" />
               <input
                 className="w-full border-none bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
@@ -442,10 +442,10 @@ export function OrdersPage() {
           <KpiCard label="Por preparar" value={String(kpis.preparing)} />
         </section>
 
-        <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
+        <section className="admin-panel px-4 py-5 sm:px-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Listado</p>
+              <p className="section-label">Listado</p>
               <h2 className="mt-2 font-serif text-2xl text-stone-900 sm:text-[2rem]">Pedidos recientes</h2>
             </div>
             <p className="text-sm text-stone-500">
@@ -460,11 +460,11 @@ export function OrdersPage() {
           ) : orders.length === 0 ? (
             <EmptyBlock className="mt-6" message={getPageMessage(errorReason, hasFilters)} />
           ) : (
-            <div className="mt-5 overflow-hidden rounded-[1.3rem] border border-stone-200 bg-white">
+            <div className="admin-table-shell mt-5">
               <div className="max-h-[62vh] overflow-auto">
                 <table className="min-w-full divide-y divide-stone-200">
-                  <thead className="bg-[#fffaf7]">
-                    <tr className="text-left text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+                  <thead className="bg-[#faf5ef]">
+                    <tr className="text-left text-xs font-semibold tracking-[0.1em] text-stone-500">
                       <th className="px-4 py-3">Orden</th>
                       <th className="px-4 py-3">Cliente</th>
                       <th className="px-4 py-3">Pago</th>
@@ -800,8 +800,8 @@ export function OrdersPage() {
 
 function KpiCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="soft-panel rounded-[1.3rem] p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">{label}</p>
+    <div className="admin-panel px-4 py-4">
+      <p className="text-[11px] font-semibold tracking-[0.08em] text-stone-500">{label}</p>
       <p className="mt-2 font-serif text-[2rem] leading-none text-stone-900">{value}</p>
     </div>
   );
@@ -820,9 +820,9 @@ function FilterSelect({
 }) {
   return (
     <label className="space-y-2">
-      <span className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">{label}</span>
+      <span className="text-xs font-semibold tracking-[0.08em] text-stone-500">{label}</span>
       <select
-        className="w-full rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+        className="w-full rounded-[1rem] border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-500"
         onChange={(event) => {
           onChange(event.target.value);
         }}

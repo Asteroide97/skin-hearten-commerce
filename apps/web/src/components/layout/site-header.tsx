@@ -31,22 +31,22 @@ export function SiteHeader({ catalogProducts }: SiteHeaderProps) {
   return (
     <>
       <SkinQuizModal catalogProducts={catalogProducts} />
-      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-white/95 backdrop-blur">
-        <div className="border-b border-stone-200/70 bg-[#f7efe8]">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-2 text-[11px] uppercase tracking-[0.24em] text-stone-600 sm:px-6 lg:px-8">
-            <p>Skincare premium por necesidad real</p>
-            <p className="hidden sm:block">Envios a todo Mexico y asesoria por WhatsApp</p>
+      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-white/92 backdrop-blur">
+        <div className="border-b border-stone-200/70 bg-[#f6efe7]">
+          <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-3 px-5 py-2 text-[11px] tracking-[0.08em] text-stone-600 sm:px-6 lg:px-8">
+            <p>Skin Hearten. Journal of skincare.</p>
+            <p className="hidden sm:block">Asesoria por WhatsApp y envios a todo Mexico</p>
           </div>
         </div>
-        <div className="mx-auto max-w-7xl px-5 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-3 lg:gap-6">
-            <Link className="shrink-0 font-serif text-[1.8rem] text-stone-950 sm:text-[2rem]" href="/">
+        <div className="mx-auto max-w-[1320px] px-5 py-4 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-4 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-8">
+            <Link className="shrink-0 font-serif text-[1.8rem] leading-none tracking-[-0.05em] text-stone-950 sm:text-[2rem]" href="/">
               Skin Hearten
             </Link>
             <SiteSearch className="hidden flex-1 lg:block" />
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center justify-end gap-2">
               <Link
-                className="inline-flex items-center gap-2 rounded-full border border-[#d9c4b2] bg-[#fff8f3] px-3 py-2 text-sm font-medium text-stone-800 transition hover:border-stone-400"
+                className="btn-secondary gap-2 px-3.5 py-2.5 text-sm"
                 href="https://wa.me/525500000000?text=Hola%20Skin%20Hearten%2C%20necesito%20asesoria%20para%20mi%20rutina."
                 target="_blank"
               >
@@ -54,13 +54,13 @@ export function SiteHeader({ catalogProducts }: SiteHeaderProps) {
                 <span className="hidden sm:inline">WhatsApp</span>
               </Link>
               <Link
-                className="hidden rounded-full border border-stone-300 px-4 py-2 text-sm text-stone-700 md:inline-flex"
+                className="btn-ghost hidden px-4 py-2.5 md:inline-flex"
                 href="/cuenta"
               >
-                Mi cuenta
+                Cuenta
               </Link>
               <Link
-                className="inline-flex items-center gap-2 rounded-full bg-stone-950 px-4 py-2.5 text-sm font-medium text-white"
+                className="btn-primary gap-2 px-4 py-2.5"
                 href="/carrito"
               >
                 <CartIcon className="h-4 w-4" />
@@ -70,16 +70,16 @@ export function SiteHeader({ catalogProducts }: SiteHeaderProps) {
             </div>
           </div>
           <SiteSearch className="mt-4 lg:hidden" />
-          <nav className="mt-4 flex gap-2 overflow-x-auto pb-1 text-sm text-stone-700">
+          <nav className="mt-4 flex gap-1.5 overflow-x-auto border-t border-stone-200 pt-4 text-sm text-stone-700">
             <SkinQuizTrigger
-              className="inline-flex whitespace-nowrap rounded-full border border-[#d9c4b2] bg-[#fff8f3] px-4 py-2 font-medium text-stone-900 transition hover:border-stone-500"
+              className="btn-secondary whitespace-nowrap px-4 py-2.5"
               source="header"
             >
               Encontrar mi rutina
             </SkinQuizTrigger>
             {navItems.map((item) => (
               <Link
-                className="whitespace-nowrap rounded-full border border-stone-200 bg-white px-4 py-2 transition hover:border-stone-400 hover:text-stone-950"
+                className="inline-flex whitespace-nowrap rounded-full px-4 py-2.5 text-stone-700 transition hover:bg-stone-100/80 hover:text-stone-950"
                 href={item.href}
                 key={item.href}
               >

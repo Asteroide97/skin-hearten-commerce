@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Manrope, Newsreader } from "next/font/google";
 
 import { SiteFrame } from "@/components/layout/site-frame";
 import { Providers } from "@/components/providers";
@@ -7,14 +7,14 @@ import { getProducts } from "@/lib/storefront-api";
 
 import "./globals.css";
 
-const inter = Inter({
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-manrope",
 });
 
-const playfair = Playfair_Display({
+const newsreader = Newsreader({
   subsets: ["latin"],
-  variable: "--font-playfair",
+  variable: "--font-newsreader",
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -45,7 +45,7 @@ export default async function RootLayout({
   const catalogProducts = await getProducts();
 
   return (
-    <html className={`${inter.variable} ${playfair.variable}`} lang="es">
+    <html className={`${manrope.variable} ${newsreader.variable}`} lang="es">
       <body className="font-sans text-stone-900">
         <Providers>
           <SiteFrame catalogProducts={catalogProducts}>{children}</SiteFrame>

@@ -474,11 +474,11 @@ export function ProductsPage() {
 
   return (
     <>
-      <div className="space-y-5">
-        <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
+      <div className="admin-workspace admin-products space-y-5">
+        <section className="admin-panel px-4 py-5 sm:px-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">Productos</p>
+              <p className="section-label">Productos</p>
               <h1 className="mt-2 font-serif text-3xl text-stone-900 sm:text-[2.4rem]">Product Media Manager</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-stone-600">
                 Administra imagenes reales de producto desde un solo panel. Puedes subir, reemplazar, marcar primaria, reordenar y eliminar sin tocar el storefront publico.
@@ -489,7 +489,7 @@ export function ProductsPage() {
             </div>
           </div>
 
-          <label className="mt-5 flex items-center gap-3 rounded-full border border-stone-200 bg-white px-4 py-2.5">
+          <label className="mt-5 flex items-center gap-3 rounded-[1rem] border border-stone-200 bg-white px-4 py-2.5">
             <SearchIcon className="h-4 w-4 text-stone-500" />
             <input
               className="w-full border-none bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
@@ -502,16 +502,16 @@ export function ProductsPage() {
           </label>
         </section>
 
-        <section className="soft-panel rounded-[1.5rem] p-3 sm:p-4">
+        <section className="admin-panel p-3 sm:p-4">
           {isLoading ? (
             <EmptyBlock message="Cargando productos reales desde la API..." />
           ) : filteredProducts.length === 0 ? (
             <EmptyBlock message={getPageMessage(errorReason)} />
           ) : (
-            <div className="overflow-hidden rounded-[1.3rem] border border-stone-200 bg-white">
+            <div className="admin-table-shell">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-stone-200 text-left">
-                  <thead className="bg-[#fff8f3] text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+                  <thead className="bg-[#faf5ef] text-xs font-semibold tracking-[0.1em] text-stone-500">
                     <tr>
                       <th className="px-4 py-3">Producto</th>
                       <th className="px-4 py-3">SKU</th>

@@ -104,95 +104,109 @@ export function ProductReviewsSection({
   }
 
   return (
-    <section className="soft-panel rounded-[1.8rem] p-6 sm:p-8">
+    <section className="store-review-block overflow-hidden rounded-[2.4rem] bg-[#f0e5da] p-6 sm:p-8">
       <SectionHeading
         eyebrow="Opiniones de clientas"
-        title="Experiencias reales con la rutina"
-        description={`Conoce como ${productName} ha funcionado en rutinas premium de cuidado diario.`}
+        title="Palabras reales sobre la rutina"
+        description={`Lectura tranquila sobre ${productName}, con resenas moderadas antes de publicarse.`}
       />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+      <div className="mt-8 grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
         <div className="space-y-6">
-          <div className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Promedio</p>
+          <div className="border-t border-stone-300/70 pt-6">
             {hasReviews ? (
-              <>
-                <p className="mt-3 font-serif text-5xl text-stone-900">
-                  {initialSummary.averageRating.toFixed(1)}
-                </p>
-                <RatingStars
-                  className="mt-4"
-                  rating={initialSummary.averageRating}
-                  reviewCount={initialSummary.reviewCount}
-                />
-                <p className="mt-4 text-sm leading-7 text-stone-600">
-                  Solo mostramos opiniones aprobadas para cuidar la calidad y autenticidad del storefront.
-                </p>
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-end gap-4">
+                  <p className="font-serif text-[4rem] leading-none text-stone-950">
+                    {initialSummary.averageRating.toFixed(1)}
+                  </p>
+                  <div className="space-y-2 pb-2">
+                    <RatingStars
+                      className="text-stone-700"
+                      rating={initialSummary.averageRating}
+                      reviewCount={initialSummary.reviewCount}
+                    />
+                    <p className="text-sm text-stone-600">Solo mostramos opiniones aprobadas.</p>
+                  </div>
+                </div>
                 <Link
-                  className="mt-5 inline-flex items-center justify-center rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-900 transition hover:border-stone-500"
+                  className="btn-secondary border-stone-300 bg-white/85"
                   href={`/reviews?product=${encodeURIComponent(productRef)}`}
                 >
                   Ver todas las resenas
                 </Link>
-              </>
+              </div>
             ) : (
-              <>
-                <p className="mt-3 font-serif text-4xl text-stone-900">Aun sin resenas aprobadas</p>
-                <p className="mt-4 text-sm leading-7 text-stone-600">
-                  Este producto todavia no tiene opiniones visibles. Puedes ser de las primeras clientas en compartir tu experiencia.
+              <div className="space-y-3">
+                <p className="font-serif text-[2.7rem] leading-none text-stone-950">
+                  Aun sin resenas aprobadas
                 </p>
-              </>
+                <p className="max-w-md text-sm leading-7 text-stone-600">
+                  Puedes ser de las primeras clientas en dejar una opinion sobre este producto.
+                </p>
+              </div>
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             {hasReviews ? (
               initialSummary.reviews.map((review) => (
-                <article className="rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-soft" key={review.id}>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="font-semibold text-stone-900">{review.customerName}</p>
-                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-stone-500">
-                        {formatLongDate(review.createdAt)}
-                      </p>
+                <article className="rounded-[1.8rem] bg-white p-5 sm:p-6" key={review.id}>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f3e7dd] font-serif text-lg text-stone-950">
+                        {getInitials(review.customerName)}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-stone-900">{review.customerName}</p>
+                        <p className="mt-1 text-xs text-stone-500">
+                          {formatLongDate(review.createdAt)}
+                        </p>
+                      </div>
                     </div>
-                    <RatingStars rating={review.rating} />
+                    <RatingStars className="text-stone-700" rating={review.rating} />
                   </div>
-                  {review.verifiedPurchase ? (
-                    <span className="mt-4 inline-flex rounded-full border border-[#d8e3cf] bg-[#f3faf0] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#476638]">
-                      Compra verificada
-                    </span>
-                  ) : null}
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {review.verifiedPurchase ? (
+                      <span className="rounded-full border border-[#d8e3cf] bg-[#f6faf3] px-3 py-1 text-[11px] font-semibold text-[#557045]">
+                        Compra verificada
+                      </span>
+                    ) : null}
+                  </div>
                   {review.title ? (
-                    <h3 className="mt-4 text-lg font-semibold text-stone-900">{review.title}</h3>
+                    <h3 className="mt-4 font-serif text-[1.7rem] leading-[1.02] text-stone-950">
+                      {review.title}
+                    </h3>
                   ) : null}
-                  <p className="mt-3 text-sm leading-7 text-stone-600">{review.body}</p>
+                  <p className="mt-3 text-sm leading-8 text-stone-600">{review.body}</p>
                 </article>
               ))
             ) : (
-              <div className="rounded-[1.6rem] border border-dashed border-stone-300 bg-white px-5 py-8 text-sm leading-7 text-stone-500">
+              <div className="rounded-[1.8rem] bg-white px-5 py-8 text-sm leading-7 text-stone-500">
                 Aun no hay opiniones aprobadas para mostrar en este producto.
               </div>
             )}
           </div>
         </div>
 
-        <div className="rounded-[1.8rem] border border-stone-200 bg-[#fffaf7] p-5 sm:p-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Escribe una resena</p>
-            <h3 className="mt-2 font-serif text-3xl text-stone-900">Comparte tu experiencia</h3>
-            <p className="mt-3 text-sm leading-7 text-stone-600">
-              Tu comentario se revisa antes de publicarse. No mostramos tu email en storefront.
+        <div className="rounded-[2rem] bg-white p-5 sm:p-6">
+          <div className="space-y-3">
+            <p className="section-label">Escribe una resena</p>
+            <h3 className="font-serif text-[2.3rem] leading-[0.98] text-stone-950">
+              Comparte tu experiencia
+            </h3>
+            <p className="max-w-lg text-sm leading-7 text-stone-600">
+              Revisamos cada comentario antes de publicarlo. Tu email nunca se muestra en storefront.
             </p>
             <Link
-              className="mt-4 inline-flex items-center rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-900 transition hover:border-stone-500"
+              className="btn-ghost px-0 py-0 text-stone-950"
               href={`/reviews/escribir?product=${encodeURIComponent(productRef)}`}
             >
               Escribir resena verificada
             </Link>
           </div>
 
-          <form className="mt-6 space-y-5" onSubmit={form.handleSubmit(handleSubmit)}>
+          <form className="mt-8 space-y-5" onSubmit={form.handleSubmit(handleSubmit)}>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 error={form.formState.errors.customerName?.message}
@@ -249,8 +263,8 @@ export function ProductReviewsSection({
             <label className="block">
               <span className="text-sm font-semibold text-stone-900">Comentario</span>
               <textarea
-                className="mt-3 min-h-36 w-full rounded-[1.2rem] border border-stone-200 bg-white px-4 py-3 text-sm leading-7 text-stone-700 outline-none transition focus:border-stone-500"
-                placeholder="Cuentanos como se siente, que notaste en tu piel y que te gusto de la experiencia."
+                className="mt-3 min-h-36 w-full rounded-[1.1rem] border border-stone-200 bg-[#fcfaf7] px-4 py-3 text-sm leading-7 text-stone-700 outline-none transition focus:border-stone-500"
+                placeholder="Cuentanos como se sintio en tu rutina y que notaste en tu piel."
                 {...form.register("body")}
               />
               {form.formState.errors.body?.message ? (
@@ -271,7 +285,7 @@ export function ProductReviewsSection({
             ) : null}
 
             <button
-              className="inline-flex w-full items-center justify-center rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-primary w-full"
               disabled={isSubmitting}
               type="submit"
             >
@@ -299,11 +313,21 @@ function Field({
     <label className="block">
       <span className="text-sm font-semibold text-stone-900">{label}</span>
       <input
-        className="mt-3 w-full rounded-[1.2rem] border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-stone-500"
+        className="mt-3 w-full rounded-[1.1rem] border border-stone-200 bg-[#fcfaf7] px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-stone-500"
         placeholder={placeholder}
         {...registration}
       />
       {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
     </label>
   );
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }

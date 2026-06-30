@@ -20,15 +20,24 @@ export function SectionHeading({
   descriptionClassName,
 }: SectionHeadingProps) {
   return (
-    <div className={cn("max-w-2xl space-y-3", className)}>
+    <div className={cn("max-w-2xl space-y-3.5", className)}>
       {eyebrow ? (
-        <p className={cn("text-xs font-semibold uppercase tracking-[0.3em] text-stone-500", eyebrowClassName)}>
+        <p className={cn("section-label", eyebrowClassName)}>
           {eyebrow}
         </p>
       ) : null}
-      <h2 className={cn("font-serif text-3xl text-stone-900 sm:text-4xl", titleClassName)}>{title}</h2>
+      <h2
+        className={cn(
+          "font-serif text-[2.15rem] leading-[0.98] text-stone-950 sm:text-[2.7rem]",
+          titleClassName,
+        )}
+      >
+        {title}
+      </h2>
       {description ? (
-        <p className={cn("text-sm leading-7 text-stone-600 sm:text-base", descriptionClassName)}>{description}</p>
+        <p className={cn("max-w-xl text-sm leading-7 text-stone-600 sm:text-[1.01rem]", descriptionClassName)}>
+          {description}
+        </p>
       ) : null}
     </div>
   );

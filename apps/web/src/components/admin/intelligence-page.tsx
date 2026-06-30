@@ -178,12 +178,12 @@ export function IntelligencePage() {
   }
 
   return (
-    <div className="space-y-5">
-      <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
+    <div className="admin-workspace admin-intelligence space-y-4">
+      <section className="admin-panel px-5 py-6 sm:px-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-4xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">Centro de Inteligencia</p>
-            <h1 className="mt-2 font-serif text-3xl text-stone-950 sm:text-[2.4rem]">
+            <p className="section-label">Centro de Inteligencia</p>
+            <h1 className="mt-2 font-serif text-[2.8rem] leading-[0.94] text-stone-950 sm:text-[3.5rem]">
               Skin Hearten Intelligence
             </h1>
             <p className="mt-3 text-sm leading-6 text-stone-600">
@@ -201,7 +201,7 @@ export function IntelligencePage() {
       </section>
 
       {isLoading ? (
-        <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
+        <section className="admin-panel p-4 sm:p-5">
           <div className="space-y-4 animate-pulse">
             <div className="h-5 w-52 rounded-full bg-stone-200" />
             <div className="grid gap-4 xl:grid-cols-[1.15fr_380px]">
@@ -221,10 +221,10 @@ export function IntelligencePage() {
         <>
           <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.18fr)_380px]">
             <div className="space-y-5">
-              <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
+              <section className="admin-panel p-4 sm:p-5">
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_320px]">
-                  <article className="rounded-[1.3rem] border border-stone-200 bg-white p-4 shadow-soft">
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Resumen ejecutivo</p>
+                  <article className="rounded-[1.4rem] border border-stone-200 bg-white p-5">
+                    <p className="section-label">Resumen ejecutivo</p>
                     <h2 className="mt-2 font-serif text-2xl text-stone-950 sm:text-[2rem]">
                       {dashboard.executiveSummary.headline}
                     </h2>
@@ -241,10 +241,10 @@ export function IntelligencePage() {
                     </div>
                   </article>
 
-                  <article className="rounded-[1.3rem] border border-stone-200 bg-white p-4 shadow-soft">
+                  <article className="rounded-[1.4rem] border border-stone-200 bg-[#fcfaf7] p-5">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Pulso inmediato</p>
+                        <p className="section-label">Pulso inmediato</p>
                         <p className="mt-2 text-sm font-semibold text-stone-900">Lecturas que requieren atencion</p>
                       </div>
                       <MetricPill label="Top clienta" value={topCustomer ? topCustomer.name : "Sin dato"} />
@@ -277,10 +277,10 @@ export function IntelligencePage() {
                 </div>
               </section>
 
-              <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
+              <section className="admin-panel p-4 sm:p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">Motor de insights</p>
+                    <p className="section-label">Motor de insights</p>
                     <h2 className="mt-2 font-serif text-2xl text-stone-950">Lecturas por fuente</h2>
                   </div>
                   <MetricPill label="Fuentes" value={String(dashboard.snapshots.length)} />
@@ -288,8 +288,8 @@ export function IntelligencePage() {
 
                 <div className="mt-4 grid gap-3 xl:grid-cols-3">
                   {dashboard.snapshots.map((snapshot) => (
-                    <article className="rounded-[1.3rem] border border-stone-200 bg-white p-4 shadow-soft" key={snapshot.id}>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
+                    <article className="rounded-[1.3rem] border border-stone-200 bg-white p-4" key={snapshot.id}>
+                      <p className="text-xs font-semibold tracking-[0.08em] text-stone-500">
                         {snapshot.title}
                       </p>
                       <p className="mt-2 text-sm font-semibold leading-6 text-stone-900">{snapshot.headline}</p>
@@ -305,10 +305,10 @@ export function IntelligencePage() {
             </div>
 
             <div className="space-y-5">
-              <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
+              <section className="admin-panel p-4 sm:p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
+                    <p className="section-label">
                       Recomendaciones automaticas
                     </p>
                     <h2 className="mt-2 font-serif text-2xl text-stone-950">Prioridades hoy</h2>
@@ -319,7 +319,7 @@ export function IntelligencePage() {
                 <div className="mt-4 max-h-[420px] space-y-3 overflow-y-auto pr-1">
                   {dashboard.recommendations.map((recommendation) => (
                     <article
-                      className="rounded-[1.3rem] border border-stone-200 bg-white p-4 shadow-soft"
+                      className="rounded-[1.3rem] border border-stone-200 bg-white p-4"
                       key={recommendation.id}
                     >
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">

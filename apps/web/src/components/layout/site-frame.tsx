@@ -17,7 +17,7 @@ export function SiteFrame({ catalogProducts, children }: SiteFrameProps) {
 
   if (isAdminRoute) {
     return (
-      <div className="app-shell min-h-screen bg-[#f6f1ea]">
+      <div className="app-shell min-h-screen bg-[linear-gradient(180deg,#f8f4ef_0%,#f5f0e9_100%)]">
         <main className="flex-1">{children}</main>
       </div>
     );

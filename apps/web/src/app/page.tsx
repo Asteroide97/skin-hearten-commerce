@@ -5,6 +5,7 @@ import { SkinQuizTrigger } from "@/components/quiz/skin-quiz-trigger";
 import { ArrowUpRightIcon, CheckCircleIcon } from "@/components/shared/icons";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { RatingStars } from "@/components/shared/rating-stars";
+import { EditorialFigure } from "@/components/store/editorial-figure";
 import { NeedCardLink } from "@/components/store/need-card-link";
 import { ProductCard } from "@/components/store/product-card";
 import { ReviewsShowcase } from "@/components/store/reviews-showcase";
@@ -79,6 +80,8 @@ export default async function HomePage() {
   const bestSellers = bestSellerSelection.length > 0 ? bestSellerSelection : catalogProducts.slice(0, 3);
   const featuredPost = blogPosts[0];
   const secondaryPosts = blogPosts.slice(1);
+  const leadTestimonial = testimonials[0];
+  const supportingTestimonials = testimonials.slice(1, 4);
   const reviewsSummary = reviewsSummaryResult.ok ? reviewsSummaryResult.data : createEmptyReviewsSummary();
 
   return (
@@ -87,115 +90,87 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         type="application/ld+json"
       />
-      <div className="mx-auto max-w-7xl space-y-16 px-5 py-6 sm:px-6 lg:space-y-20 lg:px-8 lg:py-10">
-        <section className="overflow-hidden rounded-[2.4rem] bg-stone-950 text-white shadow-[0_36px_90px_rgba(23,18,15,0.16)]">
-          <div className="grid gap-8 px-6 py-8 sm:px-8 md:px-10 lg:grid-cols-[1.05fr_0.95fr] lg:px-12 lg:py-12">
-            <div className="space-y-7">
-              <div className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.34em] text-stone-300">
-                  Skincare premium para piel real
-                </p>
-                <h1 className="max-w-3xl font-serif text-4xl leading-tight text-white sm:text-5xl lg:text-6xl">
-                  Corrige manchas, hidrata a profundidad y protege tu piel con formulas que si quieres usar todos los dias.
-                </h1>
-                <p className="max-w-2xl text-sm leading-7 text-stone-300 sm:text-base">
-                  Skin Hearten ordena la compra por necesidad, no por saturacion. Encuentra
-                  soluciones para antiedad, sensibilidad, acne adulto y proteccion solar con una
-                  experiencia pensada para convertir mejor en movil.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link
-                  className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-stone-950 transition hover:bg-stone-100"
-                  href="#shop-needs"
-                >
-                  Comprar por necesidad
-                </Link>
-                <SkinQuizTrigger
-                  className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/8 px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/12"
-                  source="home"
-                >
-                  Encontrar mi rutina
-                </SkinQuizTrigger>
-                <Link
-                  className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/40"
-                  href="#bestsellers"
-                >
-                  Ver bestsellers
-                </Link>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                {trustSignals.map((signal) => (
-                  <div
-                    className="flex items-center gap-3 rounded-full border border-white/10 bg-white/6 px-4 py-3 text-sm text-stone-200"
-                    key={signal}
-                  >
-                    <CheckCircleIcon className="h-4 w-4 shrink-0 text-[#f4cab9]" />
-                    <span>{signal}</span>
-                  </div>
-                ))}
-              </div>
+      <div className="home-page mx-auto max-w-[1320px] space-y-24 px-5 py-6 sm:px-6 lg:space-y-28 lg:px-8 lg:py-10">
+        <section className="grid gap-10 border-b border-stone-200 pb-18 lg:grid-cols-[0.78fr_1.22fr] lg:items-end lg:pb-24">
+          <div className="max-w-xl space-y-8 lg:pb-8">
+            <div className="space-y-4">
+              <p className="section-label">Skin Hearten</p>
+              <h1 className="font-serif text-[3.15rem] leading-[0.92] text-stone-950 sm:text-[4.15rem] lg:text-[5.35rem]">
+                Piel calma.
+                <br />
+                Rutinas precisas.
+              </h1>
+              <p className="max-w-md text-base leading-8 text-stone-600">
+                Skincare curado para manchas, hidratacion, sensibilidad y antiedad.
+              </p>
             </div>
 
-            <div className="relative">
-              <div className="absolute inset-x-8 top-2 h-24 rounded-full bg-[#f1cbc1] opacity-30 blur-3xl" />
-              <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-[#2c211d] via-[#201916] to-[#140f0d] p-5">
-                <div className="grid gap-4 rounded-[1.8rem] border border-white/10 bg-white/5 p-4 backdrop-blur">
-                  <div className="grid gap-4 sm:grid-cols-[1fr_0.9fr]">
-                    <div className="rounded-[1.7rem] bg-gradient-to-br from-[#f7dfd8] via-[#fff7f2] to-[#efe4d8] p-6 text-stone-900">
-                      <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-500">
-                        Rutinas curadas
-                      </p>
-                      <h2 className="mt-12 font-serif text-4xl leading-tight">
-                        Compra segun lo que tu piel necesita resolver.
-                      </h2>
-                      <p className="mt-4 text-sm leading-7 text-stone-700">
-                        Manchas, antiedad, hidratacion, sensibilidad y protector solar con seleccion clara y premium.
-                      </p>
-                    </div>
-                    <div className="grid gap-4">
-                      <div className="rounded-[1.6rem] border border-white/10 bg-white/7 p-5">
-                        <p className="text-xs uppercase tracking-[0.26em] text-stone-300">Confianza</p>
-                        <p className="mt-7 text-4xl font-semibold text-white">4.8/5</p>
-                        <p className="mt-2 text-sm text-stone-300">Valoracion promedio en productos destacados.</p>
-                      </div>
-                      <div className="rounded-[1.6rem] border border-white/10 bg-white/7 p-5">
-                        <p className="text-xs uppercase tracking-[0.26em] text-stone-300">Categorias clave</p>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {["Manchas", "Antiedad", "Sensibilidad", "FPS diario"].map((label) => (
-                            <span
-                              className="rounded-full bg-white/10 px-3 py-2 text-xs font-medium text-stone-200"
-                              key={label}
-                            >
-                              {label}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {benefits.slice(0, 3).map((benefit) => (
-                      <div className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4" key={benefit.title}>
-                        <p className="text-sm font-semibold text-white">{benefit.title}</p>
-                        <p className="mt-2 text-sm leading-6 text-stone-300">{benefit.description}</p>
-                      </div>
-                    ))}
-                  </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Link className="btn-primary px-6 py-3.5" href="#shop-needs">
+                Comprar ahora
+              </Link>
+              <SkinQuizTrigger className="btn-secondary px-6 py-3.5" source="home">
+                Encontrar mi rutina
+              </SkinQuizTrigger>
+              <Link className="btn-ghost px-0 py-3 text-stone-950" href="#bestsellers">
+                Ver bestsellers
+              </Link>
+            </div>
+
+            <div className="grid gap-3 border-t border-stone-200 pt-6 sm:grid-cols-2">
+              {trustSignals.map((signal) => (
+                <div className="flex items-center gap-3 text-sm text-stone-700" key={signal}>
+                  <CheckCircleIcon className="h-4 w-4 shrink-0 text-stone-950" />
+                  <span>{signal}</span>
                 </div>
-              </div>
+              ))}
             </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[0.88fr_1.12fr]">
+            <div className="grid gap-4">
+              <EditorialFigure
+                className="min-h-[300px]"
+                description="Lavabo, textura e ingrediente. Aire suficiente para fotografia futura."
+                frame="texture"
+                label="Texture study"
+                title="Formulas que se sienten ligeras antes de tocar la piel."
+                tone="linen"
+              />
+              <EditorialFigure
+                className="min-h-[340px]"
+                description="Espacio preparado para still life, repisa y rutina de manana."
+                frame="vanity"
+                label="Quiet shelf"
+                title="Una escena limpia para ritual, objeto y luz suave."
+                tone="mist"
+              />
+            </div>
+            <EditorialFigure
+              className="min-h-[660px]"
+              description="La portada deja sitio para retrato, gesto y empaque sin recurrir a placeholders gigantes."
+              frame="portrait"
+              label="Cover frame"
+              title="Una marca que se lee como revista y compra como ecommerce."
+              tone="blush"
+            />
           </div>
         </section>
 
-        <section className="space-y-8" id="shop-needs">
-          <SectionHeading
-            eyebrow="Compra segun tu necesidad"
-            title="Explora por problema de piel y llega mas rapido a la compra"
-            description="Cada entrada concentra una necesidad concreta para reducir friccion, mejorar confianza y acelerar decision."
-          />
+        <section className="grid gap-10 lg:grid-cols-[0.72fr_1.28fr]" id="shop-needs">
+          <div className="space-y-6 lg:sticky lg:top-28 lg:self-start">
+            <SectionHeading
+              eyebrow="Compra segun tu necesidad"
+              title="Empieza por lo que quieres cambiar."
+              description="Acne, manchas, hidratacion o sensibilidad. Menos friccion. Mejor decision."
+            />
+            <p className="max-w-sm text-sm leading-7 text-stone-600">
+              Cada entrada conduce a una seleccion concreta, no a un catalogo infinito.
+            </p>
+            <Link className="btn-ghost px-0 py-0 text-stone-950" href="/productos">
+              Ver catalogo completo
+            </Link>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {shopNeeds.map((need) => (
               <NeedCardLink
@@ -211,145 +186,159 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-stone-200 bg-white px-5 py-5 shadow-soft sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-500">Marcas seleccionadas</p>
-              <h2 className="mt-2 font-serif text-3xl text-stone-900">Curaduria de alto desempeno sin ruido visual</h2>
+        <section className="grid gap-8 border-y border-stone-200 py-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-start">
+          <EditorialFigure
+            className="min-h-[520px]"
+            description="Una base lista para retratos, ingredientes y escenas de bano minimalista."
+            frame="vanity"
+            label="Editorial space"
+            title="La textura tambien vende cuando la marca respira."
+            tone="sand"
+          />
+          <div className="grid gap-8 content-start">
+            <div className="space-y-4">
+              <p className="section-label">La experiencia</p>
+              <h2 className="max-w-xl font-serif text-[2.45rem] leading-[0.98] text-stone-950 sm:text-[3rem]">
+                Menos ruido. Mas criterio.
+              </h2>
+              <p className="max-w-xl text-sm leading-7 text-stone-600 sm:text-base">
+                Marcas seleccionadas, informacion suficiente y una compra que no interrumpe la lectura.
+              </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {storefrontBrands.map((brand) => (
-                <span
-                  className="rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-sm text-stone-700"
-                  key={brand.id}
-                >
-                  {brand.name}
-                </span>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              {benefits.slice(0, 4).map((benefit) => (
+                <div className="border-t border-stone-200 pt-4" key={benefit.title}>
+                  <p className="text-sm font-semibold text-stone-900">{benefit.title}</p>
+                  <p className="mt-2 text-sm leading-7 text-stone-600">{benefit.description}</p>
+                </div>
               ))}
+            </div>
+
+            <div className="editorial-divider pt-6">
+              <p className="section-label">Marcas seleccionadas</p>
+              <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3 text-lg text-stone-700">
+                {storefrontBrands.map((brand) => (
+                  <span key={brand.id}>{brand.name}</span>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="space-y-8">
-          <SectionHeading
-            eyebrow="Productos destacados"
-            title="Texturas, activos y beneficios visibles desde la primera pantalla"
-            description="Cards redisenadas para hacer mas facil comparar, confiar y agregar al carrito desde movil."
-          />
-          <div className="grid gap-6 xl:grid-cols-4">
+        <section className="grid gap-8 lg:grid-cols-[0.76fr_1.24fr] lg:items-start">
+          <div className="space-y-5 lg:pt-8">
+            <SectionHeading
+              eyebrow="Productos destacados"
+              title="Menos caja. Mas producto."
+              description="Fotografia, beneficio, precio y un CTA claro desde el primer vistazo."
+            />
+            <p className="max-w-sm text-sm leading-7 text-stone-600">
+              El producto queda al centro. La interfaz se hace a un lado.
+            </p>
+            <Link className="btn-ghost px-0 py-0 text-stone-950" href="/productos">
+              Explorar toda la seleccion
+            </Link>
+          </div>
+          <div className="grid gap-x-6 gap-y-10 md:grid-cols-2 xl:grid-cols-4">
             {featured.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]" id="bestsellers">
+        <section className="grid gap-10 lg:grid-cols-[0.88fr_1.12fr] lg:items-start" id="bestsellers">
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <p className="section-label">Voces de la comunidad</p>
+              <h2 className="max-w-lg font-serif text-[2.6rem] leading-[0.98] text-stone-950">
+                La confianza entra mejor cuando se lee como testimonio.
+              </h2>
+            </div>
+
+            <article className="rounded-[2.2rem] bg-[#efe4d8] p-6 sm:p-8">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/80 font-serif text-xl text-stone-950">
+                  {leadTestimonial.name
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((part) => part[0])
+                    .join("")}
+                </div>
+                <div>
+                  <p className="font-semibold text-stone-900">{leadTestimonial.name}</p>
+                  <p className="text-sm text-stone-500">{leadTestimonial.city}</p>
+                </div>
+              </div>
+              <RatingStars className="mt-6" rating={leadTestimonial.rating} />
+              <p className="mt-6 max-w-2xl font-serif text-[2rem] leading-[1.02] text-stone-950 sm:text-[2.45rem]">
+                {leadTestimonial.text}
+              </p>
+              <p className="mt-6 text-sm text-stone-500">Compra verificada</p>
+            </article>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {supportingTestimonials.map((testimonial) => (
+                <article className="border-t border-stone-200 pt-5" key={testimonial.id}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f3e5dc] text-sm font-semibold text-stone-900">
+                      {testimonial.name
+                        .split(" ")
+                        .slice(0, 2)
+                        .map((part) => part[0])
+                        .join("")}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-stone-900">{testimonial.name}</p>
+                      <p className="text-xs text-stone-500">{testimonial.city}</p>
+                    </div>
+                  </div>
+                  <RatingStars className="mt-4" rating={testimonial.rating} />
+                  <p className="mt-4 text-sm leading-7 text-stone-700">{testimonial.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-6">
             <SectionHeading
               eyebrow="Bestsellers"
-              title="Lo que mas se recompra cuando la experiencia inspira confianza"
-              description="Una segunda capa enfocada en los productos que empujan intencion de compra y credibilidad."
+              title="Lo que vuelve a entrar a la rutina."
+              description="Formulas que se recompran por sensorial, constancia y resultado."
             />
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-x-6 gap-y-10 md:grid-cols-2 xl:grid-cols-3">
               {bestSellers.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
           </div>
-          <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-[#f6efe8] p-6 shadow-soft">
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-500">Confianza en la compra</p>
-            <h2 className="mt-3 font-serif text-4xl leading-tight text-stone-900">
-              Informacion suficiente para comprar sin salir a investigar a otro sitio.
-            </h2>
-            <div className="mt-8 grid gap-4">
-              {benefits.map((benefit) => (
-                <div className="rounded-[1.5rem] bg-white/90 p-5" key={benefit.title}>
-                  <p className="font-semibold text-stone-900">{benefit.title}</p>
-                  <p className="mt-3 text-sm leading-7 text-stone-600">{benefit.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-          <div className="rounded-[2rem] bg-stone-950 p-6 text-white shadow-[0_30px_80px_rgba(23,18,15,0.12)] sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-300">Social proof</p>
-            <h2 className="mt-3 font-serif text-4xl leading-tight">
-              La confianza crece cuando la experiencia se siente clara, curada y segura.
-            </h2>
-            <div className="mt-8 rounded-[1.6rem] border border-white/10 bg-white/6 p-5">
-              <RatingStars className="text-stone-200" rating={4.9} reviewCount={1247} />
-              <p className="mt-4 text-sm leading-7 text-stone-300">
-                Clientas de Ciudad de Mexico, Monterrey y Guadalajara destacan facilidad de compra,
-                claridad de informacion y sensacion premium desde movil.
-              </p>
-            </div>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/6 p-5">
-                <p className="text-3xl font-semibold">+12k</p>
-                <p className="mt-2 text-sm text-stone-300">sesiones mensuales listas para convertir mejor</p>
-              </div>
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/6 p-5">
-                <p className="text-3xl font-semibold">4.8/5</p>
-                <p className="mt-2 text-sm text-stone-300">valoracion promedio en productos destacados</p>
-              </div>
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {testimonials.map((testimonial) => (
-              <article
-                className="rounded-[1.8rem] border border-stone-200 bg-white p-6 shadow-soft"
-                key={testimonial.id}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f3e5dc] font-serif text-xl text-stone-900">
-                    {testimonial.name
-                      .split(" ")
-                      .slice(0, 2)
-                      .map((part) => part[0])
-                      .join("")}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-stone-900">{testimonial.name}</p>
-                    <p className="text-sm text-stone-500">{testimonial.city}</p>
-                  </div>
-                </div>
-                <RatingStars className="mt-5" rating={testimonial.rating} />
-                <p className="mt-5 text-sm leading-7 text-stone-700">{testimonial.text}</p>
-                <p className="mt-5 text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">
-                  Compra verificada
-                </p>
-              </article>
-            ))}
-          </div>
         </section>
 
         <ReviewsShowcase summary={reviewsSummary} />
 
-        <section className="space-y-8">
-          <SectionHeading
-            eyebrow="Diario Skin Hearten"
-            title="Una lectura que se siente mas revista que blog"
-            description="Contenido editorial para educar, posicionar SEO y reforzar autoridad sin romper la experiencia premium."
-          />
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="space-y-10">
+          <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+            <SectionHeading
+              eyebrow="Diario Skin Hearten"
+              title="Lectura tranquila para seguir explorando."
+              description="Activos, rutina y cuidado de la piel en tono editorial."
+            />
             <Link
-              className="overflow-hidden rounded-[2.2rem] border border-stone-200 bg-white shadow-soft transition duration-300 hover:-translate-y-1"
+              className="group overflow-hidden rounded-[2.5rem] bg-[#f6eee6] p-6 sm:p-8"
               href={`/blog/${featuredPost.slug}`}
             >
-              <div className="grid min-h-[420px] gap-6 bg-gradient-to-br from-[#f7efe8] via-white to-[#f3e5dc] p-6 sm:p-8">
+              <div className="flex min-h-[420px] flex-col justify-between gap-8">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-500">Edicion principal</p>
+                    <p className="section-label">Edicion principal</p>
                     <p className="mt-2 text-sm text-stone-500">{featuredPost.publishedAt}</p>
                   </div>
-                  <span className="rounded-full border border-stone-300 px-3 py-1 text-xs font-medium text-stone-600">
-                    Guia experta
+                  <span className="rounded-full border border-stone-300/80 px-3 py-1 text-xs font-medium text-stone-600">
+                    Guia
                   </span>
                 </div>
-                <div className="flex flex-1 flex-col justify-end">
-                  <h3 className="max-w-2xl font-serif text-4xl leading-tight text-stone-900 sm:text-5xl">
+                <div>
+                  <h3 className="max-w-2xl font-serif text-4xl leading-[1] text-stone-900 transition duration-300 group-hover:translate-x-1 sm:text-5xl">
                     {featuredPost.title}
                   </h3>
                   <p className="mt-5 max-w-xl text-sm leading-7 text-stone-700 sm:text-base">
@@ -362,25 +351,20 @@ export default async function HomePage() {
                 </div>
               </div>
             </Link>
-            <div className="grid gap-6">
-              {secondaryPosts.map((post, index) => (
-                <Link
-                  className="rounded-[1.9rem] border border-stone-200 bg-white p-6 shadow-soft transition duration-300 hover:-translate-y-1"
-                  href={`/blog/${post.slug}`}
-                  key={post.id}
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.26em] text-stone-500">
-                    Columna 0{index + 1}
-                  </p>
-                  <h3 className="mt-5 font-serif text-3xl leading-tight text-stone-900">{post.title}</h3>
-                  <p className="mt-4 text-sm leading-7 text-stone-600">{post.excerpt}</p>
-                  <div className="mt-6 flex items-center justify-between text-sm text-stone-500">
-                    <span>{post.author}</span>
-                    <span>{post.publishedAt}</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            {secondaryPosts.map((post, index) => (
+              <Link className="border-t border-stone-200 pt-5" href={`/blog/${post.slug}`} key={post.id}>
+                <p className="section-label">Columna 0{index + 1}</p>
+                <h3 className="mt-5 font-serif text-[2rem] leading-[1.02] text-stone-900">{post.title}</h3>
+                <p className="mt-4 text-sm leading-7 text-stone-600">{post.excerpt}</p>
+                <div className="mt-6 flex items-center justify-between text-sm text-stone-500">
+                  <span>{post.author}</span>
+                  <span>{post.publishedAt}</span>
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
       </div>

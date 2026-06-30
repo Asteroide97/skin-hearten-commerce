@@ -16,3 +16,9 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+
+# Local browser / Codex artifacts
+.chrome-headless*/
+.codex-artifacts/
+.local-*.log
+apps/web/.local-*.log

@@ -17,83 +17,77 @@ export function ProductCard({ product }: ProductCardProps) {
     : 0;
 
   return (
-    <article className="group overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_60px_rgba(33,26,20,0.12)]">
+    <article className="group flex h-full flex-col">
       <Link className="block" href={`/producto/${product.slug}`}>
-        <div className={`relative h-80 overflow-hidden bg-gradient-to-br ${product.gradient} p-5`}>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_45%)]" />
-          <div className="relative flex h-full flex-col justify-between">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+        <div
+          className={`relative overflow-hidden rounded-[2.35rem] border border-stone-200/80 bg-gradient-to-br ${product.gradient} px-6 py-6 transition duration-300 group-hover:-translate-y-1 group-hover:border-stone-300`}
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.76),transparent_46%)]" />
+          <div className="relative flex min-h-[26rem] flex-col justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 {product.bestSeller ? (
-                  <span className="rounded-full bg-stone-950 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-white">
+                  <span className="rounded-full border border-white/70 bg-white/80 px-3 py-1 text-[11px] font-semibold text-stone-800">
                     Bestseller
                   </span>
                 ) : null}
                 {hasOffer ? (
-                  <span className="rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-800">
-                    Ahorra {savings}%
+                  <span className="rounded-full border border-white/70 bg-white/80 px-3 py-1 text-[11px] font-semibold text-stone-800">
+                    Oferta {savings}%
                   </span>
                 ) : null}
               </div>
-              <span className="rounded-full border border-white/70 bg-white/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-600">
-                {product.category}
-              </span>
+              <span className="text-[11px] text-stone-500">{product.category}</span>
             </div>
 
-            <div className="relative mx-auto mt-4 flex h-44 w-full items-end justify-center">
-              <div className="absolute left-1/2 top-2 h-16 w-16 -translate-x-1/2 rounded-full bg-white/50 blur-xl" />
-              <div className="absolute bottom-0 h-40 w-28 rounded-[2.6rem_2.6rem_1.8rem_1.8rem] border border-white/70 bg-white/85 shadow-[0_20px_40px_rgba(47,35,29,0.12)]" />
-              <div className="absolute bottom-10 h-8 w-16 rounded-full bg-[#eee6dd]" />
-              <div className="absolute bottom-2 right-[22%] h-28 w-20 rotate-[8deg] rounded-[1.3rem] border border-white/70 bg-white/70 shadow-[0_18px_36px_rgba(47,35,29,0.08)]" />
-              <span className="absolute left-0 top-6 rounded-full bg-white/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-600">
-                {product.ingredients[0]}
-              </span>
-              <span className="absolute right-0 top-20 rounded-full bg-stone-950/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-white">
-                {product.skinTypes[0]}
-              </span>
+            <div className="relative mx-auto flex h-52 w-full items-end justify-center">
+              <div className="absolute left-1/2 top-5 h-24 w-24 -translate-x-1/2 rounded-full bg-white/65 blur-2xl" />
+              <div className="absolute bottom-0 h-44 w-32 rounded-[3.1rem_3.1rem_1.7rem_1.7rem] border border-white/80 bg-white/84" />
+              <div className="absolute bottom-11 h-8 w-16 rounded-full bg-[#ead7c8]/92" />
+              <div className="absolute bottom-4 right-[24%] h-32 w-24 rotate-[8deg] rounded-[1.55rem] border border-white/76 bg-white/70" />
             </div>
 
-            <div className="rounded-[1.5rem] border border-white/60 bg-white/55 p-4 backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">{product.brand}</p>
-              <h3 className="mt-2 text-[1.35rem] font-semibold leading-tight text-stone-900">{product.name}</h3>
-              <p className="mt-2 text-sm leading-6 text-stone-700">{product.highlight}</p>
+            <div className="space-y-3">
+              <p className="text-[0.72rem] font-medium tracking-[0.08em] text-stone-500">{product.brand}</p>
+              <h3 className="max-w-[14rem] font-serif text-[2rem] leading-[0.94] text-stone-950">
+                {product.name}
+              </h3>
             </div>
           </div>
         </div>
       </Link>
-      <div className="space-y-5 p-6">
+
+      <div className="flex flex-1 flex-col gap-4 px-1 pb-2 pt-5">
         <RatingStars rating={product.rating} reviewCount={product.reviewCount} />
+        <p className="text-sm leading-7 text-stone-700">{product.highlight}</p>
+        <p className="text-sm text-stone-500">{product.benefits[0]}</p>
         <div className="flex items-end gap-3">
           {hasOffer ? (
             <p className="text-sm text-stone-400 line-through">{formatCurrency(compareAtPrice)}</p>
           ) : null}
           <p className="text-2xl font-semibold text-stone-950">{formatCurrency(product.price)}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {product.concerns.slice(0, 2).map((tag) => (
-            <span
-              className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-600"
-              key={`${product.id}-${tag}`}
+        <p className="text-xs text-stone-500">
+          {product.concerns.slice(0, 2).join(" / ")}
+          {product.skinTypes[0] ? ` / ${product.skinTypes[0]}` : ""}
+        </p>
+        <div className="mt-auto border-t border-stone-200 pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <AddToCartButton
+              className="btn-primary w-full px-4 py-3"
+              label="Agregar a rutina"
+              name={product.name}
+              price={product.price}
+              productId={product.id}
+              slug={product.slug}
+            />
+            <Link
+              className="btn-secondary w-full px-4 py-3"
+              href={`/producto/${product.slug}`}
             >
-              {tag}
-            </span>
-          ))}
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <AddToCartButton
-            className="inline-flex w-full items-center justify-center rounded-full bg-stone-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-stone-800"
-            label="Agregar a rutina"
-            name={product.name}
-            price={product.price}
-            productId={product.id}
-            slug={product.slug}
-          />
-          <Link
-            className="inline-flex w-full items-center justify-center rounded-full border border-stone-300 px-4 py-3 text-sm font-medium text-stone-800 transition hover:border-stone-500"
-            href={`/producto/${product.slug}`}
-          >
-            Ver detalle
-          </Link>
+              Ver detalle
+            </Link>
+          </div>
         </div>
       </div>
     </article>

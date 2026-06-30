@@ -20,8 +20,8 @@ export function RatingStars({ rating, reviewCount, className }: RatingStarsProps
           />
         ))}
       </div>
-      <span className="font-medium text-stone-700">{rating.toFixed(1)}</span>
-      {reviewCount ? <span className="text-stone-500">({reviewCount})</span> : null}
+      <span className="font-medium text-current">{rating.toFixed(1)}</span>
+      {reviewCount ? <span className="text-current opacity-70">({reviewCount})</span> : null}
     </div>
   );
 }

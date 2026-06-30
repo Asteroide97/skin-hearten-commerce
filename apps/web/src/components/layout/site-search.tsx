@@ -33,7 +33,7 @@ export function SiteSearch({ className }: SiteSearchProps) {
       <label className="sr-only" htmlFor="site-search">
         Buscar productos, marcas o ingredientes
       </label>
-      <div className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-4 py-3 shadow-[0_12px_30px_rgba(32,25,20,0.06)] transition focus-within:border-stone-400">
+      <div className="flex items-center gap-3 rounded-full border border-stone-200 bg-white/95 px-4 py-2.5 shadow-[0_12px_28px_rgba(32,25,20,0.04)] transition focus-within:border-stone-400">
         <SearchIcon className="text-stone-400" />
         <input
           className="w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400"
@@ -43,10 +43,7 @@ export function SiteSearch({ className }: SiteSearchProps) {
           type="search"
           value={query}
         />
-        <button
-          className="inline-flex shrink-0 items-center rounded-full bg-stone-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white"
-          type="submit"
-        >
+        <button className="btn-primary shrink-0 px-4 py-2.5 text-xs" type="submit">
           Buscar
         </button>
       </div>

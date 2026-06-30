@@ -251,11 +251,11 @@ export function CustomersPage() {
 
   return (
     <>
-      <div className="space-y-5">
-        <section className="soft-panel rounded-[1.5rem] p-4 sm:p-5">
+      <div className="admin-workspace admin-customers space-y-5">
+        <section className="admin-panel px-4 py-5 sm:px-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">Clientes</p>
+              <p className="section-label">Clientes</p>
               <h1 className="mt-2 font-serif text-3xl text-stone-900 sm:text-[2.4rem]">Base comercial operativa</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-stone-600">
                 Vista compacta, filtrable y paginada para operar miles de clientas sin depender de cards grandes ni cargas masivas.
@@ -268,7 +268,7 @@ export function CustomersPage() {
           </div>
 
           <div className="mt-5 grid gap-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(5,minmax(0,1fr))]">
-            <label className="flex items-center gap-3 rounded-full border border-stone-200 bg-white px-4 py-2.5">
+            <label className="flex items-center gap-3 rounded-[1rem] border border-stone-200 bg-white px-4 py-2.5">
               <SearchIcon className="h-4 w-4 text-stone-500" />
               <input
                 className="w-full border-none bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
@@ -353,11 +353,11 @@ export function CustomersPage() {
           </div>
         </section>
 
-        <section className="soft-panel rounded-[1.5rem] p-3 sm:p-4">
-          <div className="overflow-hidden rounded-[1.3rem] border border-stone-200 bg-white">
+        <section className="admin-panel p-3 sm:p-4">
+          <div className="admin-table-shell">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-stone-200 text-left">
-                <thead className="bg-[#fff8f3] text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500">
+                <thead className="bg-[#faf5ef] text-[11px] font-semibold tracking-[0.1em] text-stone-500">
                   <tr>
                     <th className="px-4 py-3">Cliente</th>
                     <th className="px-4 py-3">Email</th>
@@ -543,7 +543,7 @@ export function CustomersPage() {
                       <div className="mt-4 flex flex-wrap gap-2">
                         {activeCustomer.tags.map((tag) => (
                           <span
-                            className="rounded-full border border-stone-200 bg-[#fff8f3] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-600"
+                            className="rounded-full border border-stone-200 bg-[#fff8f3] px-3 py-1 text-xs font-semibold text-stone-600"
                             key={tag}
                           >
                             {formatTag(tag)}
@@ -653,9 +653,9 @@ function FilterSelect({
 }) {
   return (
     <label className="space-y-2">
-      <span className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">{label}</span>
+      <span className="text-xs font-semibold tracking-[0.08em] text-stone-500">{label}</span>
       <select
-        className="w-full rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-500"
+        className="w-full rounded-[1rem] border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-500"
         onChange={(event) => {
           onChange(event.target.value);
         }}
@@ -681,8 +681,8 @@ function MetricPill({ label, value }: { label: string; value: string }) {
 
 function MetaPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[1.2rem] bg-[#fff8f3] px-4 py-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">{label}</p>
+    <div className="rounded-[1.05rem] bg-[#fcf7f1] px-4 py-4">
+      <p className="text-xs font-semibold tracking-[0.08em] text-stone-500">{label}</p>
       <p className="mt-2 text-sm font-medium text-stone-900">{value}</p>
     </div>
   );

@@ -27,7 +27,7 @@ export function AddToCartButton({
 
   return (
     <button
-      className={className ?? "rounded-full bg-stone-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"}
+      className={className ?? "btn-primary"}
       onClick={() => {
         addItem({ productId, slug, name, price });
         trackEvent("add_to_cart", {
